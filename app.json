@@ -1,5 +1,5 @@
 {
-"expo": {
+  "expo": {
     "name": "GeofancingApp",
     "slug": "GeofancingApp",
     "version": "1.0.0",
@@ -9,38 +9,35 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-        "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.GeofancingApp"
     },
     "android": {
-    "adaptiveIcon": {
+      "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-    }
-    },
-    "web": {
-        "bundler": "metro",
-        "output": "static",
-        "favicon": "./assets/images/favicon.png"
+      },
+      "package": "com.anonymous.GeofancingApp"
     },
     "plugins": [
-        "expo-router",
-        [
-            "expo-splash-screen",
-            {
-                "image": "./assets/images/splash-icon.png",
-                "imageWidth": 200,
-                "resizeMode": "contain",
-                "backgroundColor": "#ffffff"
-            }
-        ]
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ]
     ],
     "splash": {
-        "image": "./assets/images/splash-icon.png",
-        "resizeMode": "contain",
-        "backgroundColor": "#103060"
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#103060"
     },
     "experiments": {
-        "typedRoutes": true
+      "typedRoutes": true
     }
-}
+  }
 }
