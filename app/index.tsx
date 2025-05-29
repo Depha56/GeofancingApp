@@ -35,7 +35,7 @@ export default function SplashScreen() {
             >
                 <Text className="text-white text-lg font-semibold">Signup</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity 
                 className="mt-10 px-6 py-3 rounded-3xl bg-red-600 border border-[#99b8e6]"
                 onPress= { ()=> router.push("/email-verification") }
