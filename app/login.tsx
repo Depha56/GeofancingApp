@@ -1,17 +1,27 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, Image } from 'react-native';
-import { useRouter} from 'expo-router';
-import signInIcon from '@/assets/images/header.png'; // Your image from assets
+import { View, Text, TextInput, TouchableOpacity, Image, ScrollView, ActivityIndicator } from 'react-native';
+import { useRouter } from 'expo-router';
+import signInIcon from '@/assets/images/header.png';
+import { useAuth } from '@/firebase/authentication';
 
 export default function LoginScreen() {
     const router = useRouter();
-    const [phoneNumber, setPhoneNumber] = useState('');
+    const { login, loading, error } = useAuth();
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [keepLoggedIn, setKeepLoggedIn] = useState(false);
+    const [localError, setLocalError] = useState<string | null>(null);
 
-    const handleLogin = () => {
-        // Add your login logic here
-        router.push("/(tabs)");
+    const handleLogin = async () => {
+        setLocalError(null);
+        if (!email || !password) {
+            setLocalError("Email and password are required.");
+            return;
+        }
+        
+        const user = await login(email, password);
+        if(user?.user) router.push("/(tabs)");
+
     };
 
     const handleSignUp = () => {
@@ -19,32 +29,31 @@ export default function LoginScreen() {
     };
 
     return (
-        <View className="bg-white h-full w-full">
+        <ScrollView className="bg-white h-full w-full">
             {/* Image Header */}
             <View className="w-full items-center justify-center ">
                 <Image 
-                    source={ signInIcon } 
-                    className="w-full  object-contain"
+                    source={signInIcon} 
+                    className="w-full object-contain"
                 />
             </View>
 
             {/* Login Form */}
             <View className="px-8 w-full">
-                
-                {/* Phone Number Input */}
-                <View className="w-full">
-                    <Text className="text-gray-600 ">Enter Phone Number</Text>
+                {/* Email Input */}
+                <View className="w-full mb-4">
+                    <Text className="text-gray-600 mb-2">Enter Email</Text>
                     <TextInput
                         className="w-full border border-gray-300 rounded-lg px-4 py-3"
-                        placeholder="Phone number"
-                        keyboardType="phone-pad"
-                        value={phoneNumber}
-                        onChangeText={setPhoneNumber}
+                        placeholder="Email"
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        value={email}
+                        onChangeText={setEmail}
                     />
                 </View>
-                
                 {/* Password Input */}
-                <View className="w-full mb-6 mt-3">
+                <View className="w-full mb-6">
                     <Text className="text-gray-600 mb-2">Enter password</Text>
                     <TextInput
                         className="w-full border border-gray-300 rounded-lg px-4 py-3"
@@ -54,7 +63,6 @@ export default function LoginScreen() {
                         onChangeText={setPassword}
                     />
                 </View>
-                
                 {/* Remember Me Checkbox */}
                 <View className="w-full flex flex-row items-center mb-8">
                     <TouchableOpacity 
@@ -67,23 +75,30 @@ export default function LoginScreen() {
                     </TouchableOpacity>
                     <Text className="text-gray-600">Keep me logged in.</Text>
                 </View>
-                
+                {/* Error Message */}
+                {(localError || error) && (
+                    <Text className="text-red-500 mb-4 text-center">{localError || error}</Text>
+                )}
                 {/* Login Button */}
                 <TouchableOpacity 
-                    className="w-full bg-blue-500 py-3 rounded-lg mb-6"
+                    className="w-full bg-blue-500 py-3 rounded-lg mb-6 flex items-center justify-center"
                     onPress={handleLogin}
+                    disabled={loading}
                 >
-                    <Text className="text-white text-center text-lg font-semibold">Sign In</Text>
+                    {loading ? (
+                        <ActivityIndicator color="#fff" />
+                    ) : (
+                        <Text className="text-white text-center text-lg font-semibold">Sign In</Text>
+                    )}
                 </TouchableOpacity>
-                
                 {/* Sign Up Link */}
-                <View className="flex flex-row justify-center">
+                <View className="flex flex-row mb-2 justify-center">
                     <Text className="text-gray-600">Don't have an account yet? </Text>
                     <TouchableOpacity onPress={handleSignUp}>
                         <Text className="text-blue-500 font-semibold">Sign Up</Text>
                     </TouchableOpacity>
                 </View>
             </View>
-        </View>
+        </ScrollView>
     );
 }

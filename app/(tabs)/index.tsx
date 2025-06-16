@@ -4,9 +4,8 @@ import { useEffect } from 'react';
 import { Image, Text, View, TextInput, TouchableOpacity } from 'react-native';
 import verificationIcon from '@/assets/images/icon.png';
 import bars from '@/assets/images/bars.png';
-import MapboxGL from '@rnmapbox/maps';
 import { Ionicons } from '@expo/vector-icons';
-
+import MapboxWeb from '@/components/ui/maps';
 
 export default function HomeScreen() {
     const navigation = useNavigation();
@@ -52,28 +51,8 @@ export default function HomeScreen() {
             </View>
             {/* Map */}
             <View className="flex-1 relative">
-                <MapboxGL.MapView
-                    style={{ flex: 1 }}
-                    styleURL={MapboxGL.StyleURL.Street}
-                >
-                    <MapboxGL.Camera
-                        zoomLevel={15}
-                        centerCoordinate={[30.1127, -1.9577]}
-                    />
-                    <MapboxGL.PointAnnotation
-                        id="bweramvura"
-                        coordinate={[30.1127, -1.9577]}
-                    >
-                        <View className="items-center">
-                            <Ionicons name="location-sharp" size={38} color="#E53935" />
-                            <Text className="text-xs bg-white px-2 py-1 rounded mt-1">Bweramvura</Text>
-                        </View>
-                    </MapboxGL.PointAnnotation>
-                </MapboxGL.MapView>
-                {/* Floating Info Button */}
-                <TouchableOpacity className="absolute bottom-6 right-6 bg-white rounded-full p-3 shadow-lg">
-                    <Ionicons name="information-circle-outline" size={28} color="#103060" />
-                </TouchableOpacity>
+                {/* Mapbox Web Component */}
+                <MapboxWeb />
             </View>
         </View>
     );
