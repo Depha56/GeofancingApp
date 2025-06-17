@@ -52,8 +52,8 @@ const html = `
         // Generate circle GeoJSON (simple approximation)
         function createGeoFence(center, radiusInMeters, points = 64) {
             const coords = {
-            latitude: center[1],
-            longitude: center[0]
+                latitude: center[1],
+                longitude: center[0]
             };
 
             const km = radiusInMeters / 1000;
@@ -62,19 +62,19 @@ const html = `
             const distanceY = km / 110.574;
 
             for (let i = 0; i < points; i++) {
-            const theta = (i / points) * (2 * Math.PI);
-            const x = distanceX * Math.cos(theta);
-            const y = distanceY * Math.sin(theta);
+                const theta = (i / points) * (2 * Math.PI);
+                const x = distanceX * Math.cos(theta);
+                const y = distanceY * Math.sin(theta);
 
-            ret.push([coords.longitude + x, coords.latitude + y]);
+                ret.push([coords.longitude + x, coords.latitude + y]);
             }
             ret.push(ret[0]); // close the loop
             return {
-            type: 'Feature',
-            geometry: {
-                type: 'Polygon',
-                coordinates: [ret]
-            }
+                type: 'Feature',
+                geometry: {
+                    type: 'Polygon',
+                    coordinates: [ret]
+                }
             };
         }
 
@@ -88,24 +88,24 @@ const html = `
             });
 
             map.addLayer({
-            id: 'geofence-layer',
-            type: 'fill',
-            source: 'geofence',
-            layout: {},
-            paint: {
-                'fill-color': '#E53935',
-                'fill-opacity': 0.2
-            }
+                id: 'geofence-layer',
+                type: 'fill',
+                source: 'geofence',
+                layout: {},
+                paint: {
+                    'fill-color': '#E53935',
+                    'fill-opacity': 0.2
+                }
             });
 
             map.addLayer({
-            id: 'geofence-outline',
-            type: 'line',
-            source: 'geofence',
-            paint: {
-                'line-color': '#E53935',
-                'line-width': 2
-            }
+                id: 'geofence-outline',
+                type: 'line',
+                source: 'geofence',
+                paint: {
+                    'line-color': '#E53935',
+                    'line-width': 2
+                }
             });
         });
         </script>

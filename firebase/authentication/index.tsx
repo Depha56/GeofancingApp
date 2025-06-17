@@ -1,11 +1,13 @@
-import React, { createContext, useContext, useState, ReactNode } from "react";
+import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { 
     createUserWithEmailAndPassword, 
     signInWithEmailAndPassword, 
     sendPasswordResetEmail, 
     updateProfile,
-    UserCredential 
+    UserCredential,
+    onAuthStateChanged
 } from "firebase/auth";
+import { useRouter } from "expo-router";
 import { auth, db } from "../config";
 import { doc, setDoc } from "firebase/firestore";
 
@@ -27,9 +29,18 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const router = useRouter();
+
+    useEffect(() => {
+        const unsubscribe = onAuthStateChanged(auth, (user) => {
+            if (user) {
+                router.push("/(tabs)");
+            }
+        });
+        return unsubscribe;
+    }, [router]);
 
     function errorHandler(error: any) {
-        // Customize error handling as needed
         if (error?.code) {
             switch (error.code) {
                 case 'auth/email-already-in-use':
@@ -63,17 +74,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         try {
             const userCredential = await createUserWithEmailAndPassword(auth, email, password);
 
-            // Update displayName in user profile
             if (auth.currentUser && fullName) {
                 await updateProfile(auth.currentUser, {
                     displayName: fullName,
                 });
             }
 
-            // Save to Firestore
             if (userCredential.user) {
                 const { uid } = userCredential.user;
-                
                 await setDoc(doc(db, "users", uid), {
                     uid,
                     email,

@@ -34,14 +34,14 @@ export default function HomeScreen() {
     }, [navigation]);
 
     return (
-        <View className="flex-1 bg-[#103060]">
+        <View className="flex-1">
             {/* Search Bar */}
-            <View className="px-4 pt-3 pb-2 bg-[#103060] z-10">
+            <View className="absolute w-full top-3 px-4 pt-3 pb-2 z-10">
                 <View className="flex-row items-center bg-white rounded-lg shadow px-2">
                     <Ionicons name="location-outline" size={22} color="#103060" className="mr-2" />
                     <TextInput
                         className="flex-1 py-2 px-2 text-gray-800"
-                        placeholder="Shakisha ahantu?"
+                        placeholder="Shakisha ahantu."
                         placeholderTextColor="#888"
                     />
                     <TouchableOpacity className="p-2">
