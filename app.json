@@ -19,14 +19,7 @@
           "backgroundColor": "#ffffff"
         }
       ],
-      "expo-secure-store",
-      [
-        "@rnmapbox/maps",
-        {
-          "RNMapboxMapsDownloadToken": "sk.eyJ1Ijoic2F2ZXVyMSIsImEiOiJjbWMxb3Qxa2QwN3kwMm5xdzVyeXkxd2d4In0.zMnNAn8GpaVygxSDDKZ3OQ",
-          "RNMapboxMapsVersion": "10.1.39"
-        }
-      ]
+      "expo-secure-store"
     ],
     "splash": {
       "image": "./assets/images/splash-icon.png",
