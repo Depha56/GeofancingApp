@@ -19,7 +19,11 @@
           "backgroundColor": "#ffffff"
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      "@rnmapbox/maps",
+        {
+          "RNMapboxMapsDownloadToken": "sk.eyJ1Ijoic2F2ZXVyMSIsImEiOiJjbWMxb3Qxa2QwN3kwMm5xdzVyeXkxd2d4In0.zMnNAn8GpaVygxSDDKZ3OQ"
+        }
     ],
     "splash": {
       "image": "./assets/images/splash-icon.png",
@@ -28,6 +32,9 @@
     },
     "experiments": {
       "typedRoutes": true
+    },
+    "android": {
+      "package": "com.bsaveur.GeofancingApp"
     }
   }
 }

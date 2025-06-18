@@ -4,12 +4,21 @@ import {
     signInWithEmailAndPassword, 
     sendPasswordResetEmail, 
     updateProfile,
+    signOut,
     UserCredential,
-    onAuthStateChanged
+    onAuthStateChanged,
 } from "firebase/auth";
 import { useRouter } from "expo-router";
-import { auth, db } from "../config";
-import { doc, setDoc } from "firebase/firestore";
+import { auth, db } from "./config";
+import { doc, setDoc, getDoc } from "firebase/firestore";
+
+type UserType = {
+    uid: string;
+    email: string;
+    fullName: string;
+    phoneNumber: string;
+    createdAt: string;
+} | null;
 
 type AuthContextType = {
     register: (
@@ -20,22 +29,40 @@ type AuthContextType = {
     ) => Promise<UserCredential>;
     login: (email: string, password: string) => Promise<UserCredential>;
     forgotPassword: (email: string) => Promise<void>;
+    logout: () => Promise<void>;
     loading: boolean;
+    initialLoading: boolean;
     error: string | null;
+    user: UserType;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [loading, setLoading] = useState(false);
+    const [initialLoading, setInitialLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [user, setUser] = useState<UserType>(null);
     const router = useRouter();
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            if (user) {
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            
+            if (firebaseUser) {
+                // Fetch user info from Firestore
+                const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
+                
+                if (userDoc.exists()) {
+                    setUser(userDoc.data() as UserType);
+                } else {
+                    setUser(null);
+                }
                 router.push("/(tabs)");
+            } else {
+                setUser(null);
             }
+
+            setInitialLoading(false);
         });
         return unsubscribe;
     }, [router]);
@@ -82,13 +109,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
             if (userCredential.user) {
                 const { uid } = userCredential.user;
-                await setDoc(doc(db, "users", uid), {
+                const userData = {
                     uid,
                     email,
                     fullName: fullName || "",
                     phoneNumber: phoneNumber || "",
                     createdAt: new Date().toISOString(),
-                });
+                };
+                await setDoc(doc(db, "users", uid), userData);
+                setUser(userData);
             }
 
             return userCredential;
@@ -105,6 +134,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setError(null);
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            // Fetch user info from Firestore
+            const { uid } = userCredential.user;
+            const userDoc = await getDoc(doc(db, "users", uid));
+            if (userDoc.exists()) {
+                setUser(userDoc.data() as UserType);
+            } else {
+                setUser(null);
+            }
             return userCredential;
         } catch (err: any) {
             errorHandler(err);
@@ -127,8 +164,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
+    const logout = async () => {
+        setLoading(true);
+        setError(null);
+
+        await signOut(auth);
+        setUser(null);
+        setLoading(false);
+
+        router.push("/login");
+    };
+
     return (
-        <AuthContext.Provider value={{ register, login, forgotPassword, loading, error }}>
+        <AuthContext.Provider value={{ register, login, forgotPassword, logout, loading, initialLoading, error, user }}>
             {children}
         </AuthContext.Provider>
     );

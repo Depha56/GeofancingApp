@@ -8,7 +8,7 @@ import 'react-native-reanimated';
 import "@/scripts/global.css";
 
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { AuthProvider } from '@/firebase/authentication';
+import { AuthProvider } from '@/firebase/auth-context';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -40,7 +40,7 @@ export default function RootLayout() {
                     <Stack.Screen name="email-verification" options={{ headerShown: false }} />
                     <Stack.Screen name="not-found" />
                 </Stack>
-                <StatusBar style="auto" />
+                <StatusBar style="light" />
             </AuthProvider>
         </ThemeProvider>
     );

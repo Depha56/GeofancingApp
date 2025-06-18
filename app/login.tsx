@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import signInIcon from '@/assets/images/header.png';
-import { useAuth } from '@/firebase/authentication';
+import { useAuth } from '@/firebase/auth-context';
 
 export default function LoginScreen() {
     const router = useRouter();

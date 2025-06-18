@@ -45,7 +45,7 @@ const html = `
         el.className = 'marker';
 
         new mapboxgl.Marker(el)
-            .setLngLat([30.1127, -1.9577])
+            .setLngLat([30.11278, -1.9577])
             .setPopup(new mapboxgl.Popup({ offset: 25 }).setText('Bweramvura'))
             .addTo(map);
 

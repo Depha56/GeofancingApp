@@ -19,5 +19,5 @@ export default function SplashScreen() {
                 <Text className="text-white text-lg font-semibold">Get Started</Text>
             </TouchableOpacity>
         </View>
-        );
+    );
 }

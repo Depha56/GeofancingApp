@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, Image, ScrollView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import signUpIcon from '@/assets/images/GroupB.png';
-import { useAuth } from '@/firebase/authentication';
+import { useAuth } from '@/firebase/auth-context';
 
 export default function SignUpScreen() {
     const router = useRouter();
