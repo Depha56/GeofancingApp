@@ -10,13 +10,17 @@ import {
 } from "firebase/auth";
 import { useRouter } from "expo-router";
 import { auth, db } from "./config";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { STORAGE_KEY } from './tracking-context'; // Export STORAGE_KEY from tracking-context
+import { useTracking } from './tracking-context';
 
 export type UserType = {
     uid: string;
     email: string;
     fullName: string;
     phoneNumber: string;
+    farmId?: string;
     createdAt: string;
 } | null;
 
@@ -44,6 +48,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [error, setError] = useState<string | null>(null);
     const [user, setUser] = useState<UserType>(null);
     const router = useRouter();
+    const { fetchFarmData } = useTracking();
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -138,6 +143,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const { uid } = userCredential.user;
             const userDoc = await getDoc(doc(db, "users", uid));
             if (userDoc.exists()) {
+                // Fetch farm data if farmId exists
+                if (userDoc.data()?.farmId) fetchFarmData(userDoc.data().farmId);
                 setUser(userDoc.data() as UserType);
             } else {
                 setUser(null);
@@ -164,15 +171,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
+    // Logout: clear AsyncStorage
     const logout = async () => {
         setLoading(true);
-        setError(null);
-
-        await signOut(auth);
-        setUser(null);
-        setLoading(false);
-
-        router.push("/login");
+        try {
+            await signOut(auth);
+            await AsyncStorage.removeItem(STORAGE_KEY); // Clear farm data
+            setUser(null);
+            router.push("/login");
+        } catch (err: any) {
+            setError(err.message || "Logout failed.");
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -188,4 +199,20 @@ export const useAuth = () => {
         throw new Error("useAuth must be used within an AuthProvider");
     }
     return context;
+};
+
+/**
+ * Fetch all users with a particular farmId from Firestore.
+ * @param farmId The farmId to filter users by.
+ * @returns Array of UserType
+ */
+export const fetchUsersByFarmId = async (farmId: string): Promise<UserType[]> => {
+    const usersRef = collection(db, "users");
+    const q = query(usersRef, where("farmId", "==", farmId));
+    const querySnapshot = await getDocs(q);
+    const users: UserType[] = [];
+    querySnapshot.forEach((docSnap) => {
+        users.push(docSnap.data() as UserType);
+    });
+    return users;
 };

@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
-import { doc, setDoc, getDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "./config";
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { UserType } from "./auth-context"; // <-- Import useAuth
 
 type FarmCenterCoordinates = {
     latitude: number;
@@ -15,45 +16,60 @@ type SensorFeed = {
 };
 
 type TrackingContextType = {
-    homeId: string | null;
+    farmId: string | null;
     farmRadius: number | null;
     farmCenterCoordinates: FarmCenterCoordinates | null;
     collarIds: string[];
     setFarmData: (
         farmRadius: number,
         farmCenterCoordinates: FarmCenterCoordinates,
-        collarIds: string[]
+        collarIds: string[],
+        user: UserType
     ) => Promise<void>;
-    fetchFarmData: (homeId: string) => Promise<void>;
+    fetchFarmData: (farmId: string) => Promise<void>;
     sensorsFeeds: SensorFeed[];
-    generateHomeId: () => string;
+    generateFarmId: () => string;
 };
 
 const TrackingContext = createContext<TrackingContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'FARM_DATA';
+export const STORAGE_KEY = 'FARM_DATA'; 
 
-// Generate a short unique homeId (6 alphanumeric characters)
-const generateHomeId = () => {
+// Generate a short unique farmId (6 alphanumeric characters)
+const generateFarmId = () => {
     return Math.random().toString(36).substr(2, 6);
 };
 
 export const TrackingProvider = ({ children }: { children: ReactNode }) => {
-    const [homeId, setHomeId] = useState<string | null>(null);
+    const [farmId, setFarmId] = useState<string | null>(null);
     const [farmRadius, setFarmRadius] = useState<number | null>(null);
     const [farmCenterCoordinates, setFarmCenterCoordinates] = useState<FarmCenterCoordinates | null>(null);
     const [collarIds, setCollarIds] = useState<string[]>([]);
     const [sensorsFeeds, setSensorsFeeds] = useState<SensorFeed[]>([]);
 
+    // Check if collarId exists, and add if unique
+    const addUniqueCollarId = async (collarId: string) => {
+        const collarRef = doc(db, "collars", collarId);
+        const collarSnap = await getDoc(collarRef);
+        if (collarSnap.exists()) {
+            throw new Error("Collar ID Was Taken!");
+        }
+        await setDoc(collarRef, { collarId });
+    };
+
     // Save farm data to Firestore and AsyncStorage
     const setFarmData = async (
         farmRadius: number,
         farmCenterCoordinates: FarmCenterCoordinates,
-        collarIds: string[]
+        collarIds: string[],
+        user: UserType
     ) => {
-        const newHomeId = homeId || generateHomeId();
-        await setDoc(doc(db, "farms", newHomeId), {
-            homeId: newHomeId,
+
+        await addUniqueCollarId(collarIds[0]);
+
+        const newFarmId = farmId || generateFarmId();
+        await setDoc(doc(db, "farms", newFarmId), {
+            farmId: newFarmId,
             farmRadius,
             farmCenterCoordinates,
             role: "Farm Owner",
@@ -61,23 +77,30 @@ export const TrackingProvider = ({ children }: { children: ReactNode }) => {
             collarIds,
         });
 
+        // Update logged-in user's Firestore document with farmId
+        if (user?.uid) {
+            await updateDoc(doc(db, "users", user.uid), {
+                farmId: newFarmId,
+            });
+        }
+
         await AsyncStorage.setItem(
             STORAGE_KEY,
-            JSON.stringify({ homeId: newHomeId, farmRadius, farmCenterCoordinates, collarIds, role: "Farm Owner" })
+            JSON.stringify({ farmId: newFarmId, farmRadius, farmCenterCoordinates, collarIds, role: "Farm Owner" })
         );
 
-        setHomeId(newHomeId);
+        setFarmId(newFarmId);
         setFarmRadius(farmRadius);
         setFarmCenterCoordinates(farmCenterCoordinates);
         setCollarIds(collarIds);
     };
 
     // Fetch farm data from Firestore
-    const fetchFarmData = useCallback(async (homeId: string) => {
-        const docSnap = await getDoc(doc(db, "farms", homeId));
+    const fetchFarmData = useCallback(async (farmId: string) => {
+        const docSnap = await getDoc(doc(db, "farms", farmId));
         if (docSnap.exists()) {
             const data = docSnap.data();
-            setHomeId(data.homeId);
+            setFarmId(data.farmId);
             setFarmRadius(data.farmRadius);
             setFarmCenterCoordinates(data.farmCenterCoordinates);
             setCollarIds(data.collarIds || []);
@@ -85,7 +108,7 @@ export const TrackingProvider = ({ children }: { children: ReactNode }) => {
             await AsyncStorage.setItem(
                 STORAGE_KEY,
                 JSON.stringify({
-                    homeId: data.homeId,
+                    farmId: data.farmId,
                     farmRadius: data.farmRadius,
                     farmCenterCoordinates: data.farmCenterCoordinates,
                     collarIds: data.collarIds || [],
@@ -139,15 +162,15 @@ export const TrackingProvider = ({ children }: { children: ReactNode }) => {
             const stored = await AsyncStorage.getItem(STORAGE_KEY);
             if (stored) {
                 try {
-                    const { homeId, farmRadius, farmCenterCoordinates, collarIds } = JSON.parse(stored);
-                    setHomeId(homeId);
+                    const { farmId, farmRadius, farmCenterCoordinates, collarIds } = JSON.parse(stored);
+                    setFarmId(farmId);
                     setFarmRadius(farmRadius);
                     setFarmCenterCoordinates(farmCenterCoordinates);
                     setCollarIds(collarIds || []);
                 } catch (e) {
                     // Optionally handle error
                     console.error("Error parsing stored farm data:", e);
-                    setHomeId(null);
+                    setFarmId(null);
                 }
             }
         }
@@ -164,14 +187,14 @@ export const TrackingProvider = ({ children }: { children: ReactNode }) => {
     return (
         <TrackingContext.Provider
             value={{
-                homeId,
+                farmId,
                 farmRadius,
                 farmCenterCoordinates,
                 collarIds,
                 setFarmData,
                 fetchFarmData,
                 sensorsFeeds,
-                generateHomeId,
+                generateFarmId,
             }}
         >
             {children}

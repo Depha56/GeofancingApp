@@ -18,6 +18,7 @@ import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
 import Geolocation from '@react-native-community/geolocation';
 import { Ionicons } from '@expo/vector-icons';
 import { useTracking } from '@/firebase/tracking-context';
+import { useAuth } from '@/firebase/auth-context';
 
 MapboxGL.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || '');
 
@@ -63,6 +64,7 @@ const styles = StyleSheet.create({
 export default function GeofenceSetupScreen() {
   const router = useRouter();
   const { setFarmData } = useTracking();
+  const { user } = useAuth();
 
   const [center, setCenter] = useState<[number, number]>([30.1127, -1.9577]);
   const [radius, setRadius] = useState<number>(200);
@@ -142,7 +144,8 @@ export default function GeofenceSetupScreen() {
       await setFarmData(
         radius,
         { latitude: center[1], longitude: center[0] },
-        [collarId]
+        [collarId],
+        user
       );
       router.replace('/(tabs)');
     } catch {

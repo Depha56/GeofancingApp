@@ -23,7 +23,6 @@
       [
         "@rnmapbox/maps",
         {
-          "RNMapboxMapsVersion": "10.1.39",
           "RNMapboxMapsDownloadToken": "sk.eyJ1Ijoic2F2ZXVyMSIsImEiOiJjbWMxeGk4bjUwMjUxMmtxdzVhZ3B1dWp5In0.KHsxDphXjmMO9fe5KKSJgg",
           "locationWhenInUsePermission": "Show current location on map."
         }
@@ -42,6 +41,14 @@
     },
     "ios": {
       "bundleIdentifier": "com.bsaveur.GeofancingApp"
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "03c8eec1-f7fe-4ff0-b909-cfc737f46d74"
+      }
     }
   }
 }

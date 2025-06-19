@@ -10,7 +10,7 @@ export default function HomeScreen() {
     const navigation = useNavigation();
     const [menuVisible, setMenuVisible] = useState(false);
     const { user } = useAuth();
-    const { homeId } = useTracking();
+    const { farmId } = useTracking();
 
     useEffect(() => {
         navigation.setOptions(homeOptions(user, setMenuVisible, menuVisible));
@@ -18,7 +18,7 @@ export default function HomeScreen() {
 
     return (
         <Fragment>
-            {homeId ? <MainTrackingAnimal /> : <GeofenceSetupScreen />}
+            {farmId ? <MainTrackingAnimal /> : <GeofenceSetupScreen />}
         </Fragment>
     );
 }
