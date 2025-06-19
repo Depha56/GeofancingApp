@@ -8,6 +8,7 @@ import TabBarBackground from '@/components/ui/TabBarBackground';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { TrackingProvider } from '@/firebase/tracking-context';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 export default function TabLayout() {
     const colorScheme = useColorScheme();
@@ -36,10 +37,18 @@ export default function TabLayout() {
                 />
 
                 <Tabs.Screen
-                    name="explore"
+                    name="settings"
                     options={{
-                        title: 'Explore',
-                        tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+                        title: 'Settings',
+                        tabBarIcon: ({ color }) => <Ionicons name="settings" size={24} color={color} />,
+                    }}
+                />
+
+                <Tabs.Screen
+                    name="profile"
+                    options={{
+                        headerShown: false,
+                        tabBarIcon: ({ color }) => <IconSymbol size={28} name="a.book.closed" color={color} />,
                     }}
                 />
             </Tabs>

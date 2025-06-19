@@ -8,23 +8,24 @@ type FarmCenterCoordinates = {
     longitude: number;
 };
 
-type AnimalLocation = {
-    latitude: number;
+type SensorFeed = {
     longitude: number;
-} | null;
+    latitude: number;
+    collarId: string;
+};
 
 type TrackingContextType = {
     homeId: string | null;
     farmRadius: number | null;
     farmCenterCoordinates: FarmCenterCoordinates | null;
+    collarIds: string[];
     setFarmData: (
         farmRadius: number,
         farmCenterCoordinates: FarmCenterCoordinates,
-        collarId: string
+        collarIds: string[]
     ) => Promise<void>;
     fetchFarmData: (homeId: string) => Promise<void>;
-    animalLocation: AnimalLocation;
-    fetchAnimalLocation: () => Promise<void>;
+    sensorsFeeds: SensorFeed[];
     generateHomeId: () => string;
 };
 
@@ -41,29 +42,34 @@ export const TrackingProvider = ({ children }: { children: ReactNode }) => {
     const [homeId, setHomeId] = useState<string | null>(null);
     const [farmRadius, setFarmRadius] = useState<number | null>(null);
     const [farmCenterCoordinates, setFarmCenterCoordinates] = useState<FarmCenterCoordinates | null>(null);
-    const [animalLocation, setAnimalLocation] = useState<AnimalLocation>(null);
+    const [collarIds, setCollarIds] = useState<string[]>([]);
+    const [sensorsFeeds, setSensorsFeeds] = useState<SensorFeed[]>([]);
 
     // Save farm data to Firestore and AsyncStorage
     const setFarmData = async (
         farmRadius: number,
         farmCenterCoordinates: FarmCenterCoordinates,
-        collarId: string
+        collarIds: string[]
     ) => {
-        // Generate homeId if not present
         const newHomeId = homeId || generateHomeId();
         await setDoc(doc(db, "farms", newHomeId), {
             homeId: newHomeId,
             farmRadius,
             farmCenterCoordinates,
-            collarId,
+            role: "Farm Owner",
+            createdAt: new Date(),
+            collarIds,
         });
+
         await AsyncStorage.setItem(
             STORAGE_KEY,
-            JSON.stringify({ homeId: newHomeId, farmRadius, farmCenterCoordinates, collarId })
+            JSON.stringify({ homeId: newHomeId, farmRadius, farmCenterCoordinates, collarIds, role: "Farm Owner" })
         );
+
         setHomeId(newHomeId);
         setFarmRadius(farmRadius);
         setFarmCenterCoordinates(farmCenterCoordinates);
+        setCollarIds(collarIds);
     };
 
     // Fetch farm data from Firestore
@@ -74,36 +80,58 @@ export const TrackingProvider = ({ children }: { children: ReactNode }) => {
             setHomeId(data.homeId);
             setFarmRadius(data.farmRadius);
             setFarmCenterCoordinates(data.farmCenterCoordinates);
+            setCollarIds(data.collarIds || []);
+            
             await AsyncStorage.setItem(
                 STORAGE_KEY,
                 JSON.stringify({
                     homeId: data.homeId,
                     farmRadius: data.farmRadius,
                     farmCenterCoordinates: data.farmCenterCoordinates,
-                    collarId: data.collarId,
+                    collarIds: data.collarIds || [],
                 })
             );
         }
     }, []);
 
-    // Fetch animal location from ThingSpeak API
-    const fetchAnimalLocation = useCallback(async () => {
+    // Fetch sensors feeds from ThingSpeak API
+    const fetchSensorsFeeds = useCallback(async () => {
         try {
             const res = await fetch(
-                "https://api.thingspeak.com/channels/2989762/feeds.json?api_key=B0CPJXS5KOZBZOB2&results=1"
+                "https://api.thingspeak.com/channels/2989762/feeds.json?api_key=B0CPJXS5KOZBZOB2"
             );
             const data = await res.json();
-            if (data.feeds && data.feeds.length > 0) {
-                const field1 = data.feeds[0].field1; // "-51.840084,-23.466249"
-                if (field1) {
-                    const [longitude, latitude] = field1.split(",").map(Number);
-                    setAnimalLocation({ longitude, latitude });
-                }
+            if (data.feeds && Array.isArray(data.feeds)) {
+                // Map to latest feed per collarId
+                const latestFeeds: Record<string, { feed: any; created_at: string }> = {};
+                data.feeds.forEach((feed: any) => {
+                    const collarId = feed.field2;
+                    const createdAt = feed.created_at;
+                    
+                    if (!collarId || !feed.field1) return;
+                    
+                    if (!latestFeeds[collarId] || new Date(createdAt) > new Date(latestFeeds[collarId].created_at)) {
+                        latestFeeds[collarId] = { feed, created_at: createdAt };
+                    }
+                });
+
+                const feedsArr: SensorFeed[] = Object.values(latestFeeds)
+                    .map(({ feed }) => {
+                        const [longitude, latitude] = feed.field1.split(",").map(Number);
+                        return {
+                            longitude,
+                            latitude,
+                            collarId: feed.field2,
+                        };
+                    })
+                    .filter(feed => collarIds.includes(feed.collarId));
+                setSensorsFeeds(feedsArr);
             }
         } catch (e) {
-            // Optionally handle error
+            console.error("Error fetching sensors feeds:", e);
+            setSensorsFeeds([]);
         }
-    }, []);
+    }, [collarIds]);
 
     // On mount, load farm data from AsyncStorage
     useEffect(() => {
@@ -111,24 +139,27 @@ export const TrackingProvider = ({ children }: { children: ReactNode }) => {
             const stored = await AsyncStorage.getItem(STORAGE_KEY);
             if (stored) {
                 try {
-                    const { homeId, farmRadius, farmCenterCoordinates } = JSON.parse(stored);
+                    const { homeId, farmRadius, farmCenterCoordinates, collarIds } = JSON.parse(stored);
                     setHomeId(homeId);
                     setFarmRadius(farmRadius);
                     setFarmCenterCoordinates(farmCenterCoordinates);
+                    setCollarIds(collarIds || []);
                 } catch (e) {
                     // Optionally handle error
+                    console.error("Error parsing stored farm data:", e);
+                    setHomeId(null);
                 }
             }
         }
         loadFarmDataFromStorage();
     }, []);
 
-    // Poll animal location every 30 seconds
+    // Poll sensors feeds every 30 seconds
     useEffect(() => {
-        fetchAnimalLocation();
-        const interval = setInterval(fetchAnimalLocation, 30000);
+        fetchSensorsFeeds();
+        const interval = setInterval(fetchSensorsFeeds, 30000);
         return () => clearInterval(interval);
-    }, [fetchAnimalLocation]);
+    }, [fetchSensorsFeeds]);
 
     return (
         <TrackingContext.Provider
@@ -136,10 +167,10 @@ export const TrackingProvider = ({ children }: { children: ReactNode }) => {
                 homeId,
                 farmRadius,
                 farmCenterCoordinates,
+                collarIds,
                 setFarmData,
                 fetchFarmData,
-                animalLocation,
-                fetchAnimalLocation,
+                sensorsFeeds,
                 generateHomeId,
             }}
         >

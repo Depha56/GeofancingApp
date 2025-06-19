@@ -1,133 +1,216 @@
-import React, { useState } from 'react';
-import { View, TextInput, Button, Text, Alert, StyleSheet, TouchableOpacity } from 'react-native';
-import { useNavigation, NavigationProp } from '@react-navigation/native';
-import * as Location from "expo-location";
-import MapView, { PROVIDER_GOOGLE, Marker, MapPressEvent } from "react-native-maps";
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  TextInput,
+  Button,
+  Text,
+  StyleSheet,
+  Alert,
+  TouchableOpacity,
+  PermissionsAndroid,
+  Platform,
+} from 'react-native';
+import MapboxGL from '@rnmapbox/maps';
+import { useRouter } from 'expo-router';
+import turfCircle from '@turf/circle';
+import { featureCollection, point } from '@turf/helpers';
+import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
+import Geolocation from '@react-native-community/geolocation';
 import { Ionicons } from '@expo/vector-icons';
-type RootStackParamList = {
-    TrackingScreen: {
-        center: [number, number];
-        radius: number;
-        collarId: string;
-    };
-};
+import { useTracking } from '@/firebase/tracking-context';
 
-
-
-export default function GeofenceSetupScreen() {
-    const navigation = useNavigation<NavigationProp<RootStackParamList>>();
-
-    const [radius, setRadius] = useState<number>(300);
-    const [collarId, setCollarId] = useState<string>('');
-    // Removed unused center state
-    const [selectedLocation, setSelectedLocation] = useState<{ latitude: number; longitude: number } | undefined>(undefined);
-    const [loading, setLoading] = useState(false);
-
-    const handleRadiusChange = (val: string) => {
-        const parsed = parseInt(val) || 0;
-        setRadius(parsed);
-    };
-
-    const handleContinue = () => {
-        if (!collarId) {
-            alert('Please enter a collar ID');
-            return;
-        }
-        if (!selectedLocation) {
-            alert('Please select a location on the map or use your current location');
-            return;
-        }
-        navigation.navigate('TrackingScreen', {
-            center: [selectedLocation.latitude, selectedLocation.longitude],
-            radius,
-            collarId
-        });
-    };
-
-    const handleGetCurrentLocation = async () => {
-        setLoading(true);
-
-        try {
-            const { status } = await Location.requestForegroundPermissionsAsync();
-
-            if (status !== "granted") {
-                Alert.alert(
-                "Permission denied",
-                "Permission to access location was denied"
-                );
-                setLoading(false);
-                return;
-            }
-
-            const currentLocation = await Location.getCurrentPositionAsync({
-                accuracy: Location.Accuracy.High,
-            });
-
-            const { latitude, longitude } = currentLocation.coords;
-            setSelectedLocation({ latitude, longitude });
-            Alert.alert("Success", "Current location detected");
-        } catch (error) {
-            console.error("Error getting location:", error);
-            Alert.alert("Error", "Failed to get your current location");
-        } finally {
-            setLoading(false);
-        }
-  };
-
-  const handleMapPress = (e: MapPressEvent) => {
-    const { latitude, longitude } = e.nativeEvent.coordinate;
-    setSelectedLocation({ latitude, longitude });
-  };
-
-    return (
-        <View className="flex-1 bg-white">
-            <TouchableOpacity
-                className="flex flex-row items-center gap-2 bg-white border rounded-xl border-grey/20 p-3 mb-3"
-                onPress={handleGetCurrentLocation}
-                disabled={loading}
-            >
-                <Ionicons name="locate" size={20} color="#E02323" />
-                <Text> {loading ? "Getting your location..." : "Use my current location"} </Text>
-            </TouchableOpacity>
-
-            <MapView
-                    style={styles.map}
-                    provider={PROVIDER_GOOGLE}
-                    region={{
-                    latitude: selectedLocation ? selectedLocation.latitude : 30.1127,
-                    longitude: selectedLocation ? selectedLocation.longitude : -1.9577,
-                    latitudeDelta: 0.005,
-                    longitudeDelta: 0.005,
-                    }}
-                    onPress={handleMapPress}
-            >
-                {selectedLocation && <Marker coordinate={selectedLocation} />}
-            </MapView>
-            <View className="p-4 bg-white">
-                <Text className="font-bold text-sm mb-1">Animal or Collar ID</Text>
-                <TextInput
-                    value={collarId}
-                    onChangeText={setCollarId}
-                    placeholder="e.g. Cow123"
-                    className="border border-gray-300 rounded px-3 py-2 mb-3"
-                />
-                <Text className="font-bold text-sm mb-1">Fence Radius (meters)</Text>
-                <TextInput
-                    value={radius.toString()}
-                    onChangeText={handleRadiusChange}
-                    keyboardType="numeric"
-                    className="border border-gray-300 rounded px-3 py-2 mb-3"
-                />
-                <Button title="Continue to Tracking" onPress={handleContinue} />
-            </View>
-        </View>
-    );
-}
+MapboxGL.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_ACCESS_TOKEN || '');
 
 const styles = StyleSheet.create({
   map: {
-    width: "100%",
-    height: "100%",
-    borderRadius: 12,
+    flex: 1,
+  },
+  form: {
+    padding: 16,
+    backgroundColor: '#fff',
+  },
+  input: {
+    borderColor: '#ccc',
+    borderWidth: 1,
+    padding: 8,
+    marginBottom: 12,
+    borderRadius: 4,
+  },
+  label: {
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  locateButton: {
+    position: 'absolute',
+    top: 70,
+    right: 8,
+    backgroundColor: '#fff',
+    padding: 10,
+    borderRadius: 30,
+    elevation: 5,
+    zIndex: 10,
+  },
+  marker: {
+    width: 30,
+    height: 30,
+    backgroundColor: 'red',
+    borderRadius: 15,
+    borderWidth: 2,
+    borderColor: 'white',
   },
 });
+
+export default function GeofenceSetupScreen() {
+  const router = useRouter();
+  const { setFarmData } = useTracking();
+
+  const [center, setCenter] = useState<[number, number]>([30.1127, -1.9577]);
+  const [radius, setRadius] = useState<number>(200);
+  const [collarId, setCollarId] = useState<string>('');
+  const [geojson, setGeojson] = useState<any>(() => generateCircle([30.1127, -1.9577], 300));
+
+  function generateCircle(center: [number, number], radius: number) {
+    const circle = turfCircle(point(center), radius / 1000, {
+      steps: 64,
+      units: 'kilometers',
+    });
+    return featureCollection([circle]);
+  }
+
+  useEffect(() => {
+    const checkPermissions = async () => {
+      const status = await check(PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION);
+      if (status !== RESULTS.GRANTED) {
+        const requestStatus = await request(PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION);
+        if (requestStatus !== RESULTS.GRANTED) {
+          Alert.alert('Location Permission Required', 'Please enable location permissions to use this feature.');
+        }
+      }
+    };
+
+    checkPermissions();
+  }, []);
+
+  const centerOnUserLocation = async () => {
+    try {
+      if (Platform.OS === 'android') {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
+        );
+        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
+          Alert.alert('Permission Denied', 'Location permission is required');
+          return;
+        }
+      }
+
+      Geolocation.getCurrentPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          const newCenter: [number, number] = [longitude, latitude];
+          setCenter(newCenter);
+          setGeojson(generateCircle(newCenter, radius));
+        },
+        (error) => {
+          Alert.alert('Error', 'Could not fetch location');
+          console.error(error);
+        },
+        { enableHighAccuracy: true }
+      );
+    } catch (err) {
+      console.error('Permission error', err);
+    }
+  };
+
+  const onDragEnd = (e: any) => {
+    const coords = e.geometry.coordinates;
+    setCenter(coords);
+    setGeojson(generateCircle(coords, radius));
+  };
+
+  const handleRadiusChange = (val: string) => {
+    const parsed = parseInt(val) || 0;
+    setRadius(parsed);
+    setGeojson(generateCircle(center, parsed));
+  };
+
+  const handleContinue = async () => {
+    if (!collarId) {
+      Alert.alert('Validation', 'Please enter a collar ID');
+      return;
+    }
+    try {
+      await setFarmData(
+        radius,
+        { latitude: center[1], longitude: center[0] },
+        [collarId]
+      );
+      router.replace('/(tabs)');
+    } catch {
+      Alert.alert('Error', 'Failed to save farm data');
+    }
+  };
+
+  return (
+    <View style={{ flex: 1 }}>
+      <MapboxGL.MapView
+        style={styles.map}
+        styleURL={MapboxGL.StyleURL.Street}
+        logoEnabled={false}
+        compassEnabled={true}
+        onPress={(e) => {
+          const coords = (e.geometry as any).coordinates;
+          setCenter(coords);
+          setGeojson(generateCircle(coords, radius));
+        }}
+      >
+        <MapboxGL.Camera centerCoordinate={center} zoomLevel={15} />
+
+        <MapboxGL.LocationPuck visible={true} />
+
+        <MapboxGL.PointAnnotation
+          id="marker"
+          coordinate={center}
+          draggable
+          onDragEnd={onDragEnd}
+        >
+          <View style={styles.marker} />
+        </MapboxGL.PointAnnotation>
+
+        <MapboxGL.ShapeSource id="circle" shape={geojson}>
+          <MapboxGL.FillLayer
+            id="circle-fill"
+            style={{ fillColor: 'red', fillOpacity: 0.2 }}
+          />
+          <MapboxGL.LineLayer
+            id="circle-outline"
+            style={{ lineColor: 'red', lineWidth: 2 }}
+          />
+        </MapboxGL.ShapeSource>
+      </MapboxGL.MapView>
+
+      <TouchableOpacity style={styles.locateButton} onPress={centerOnUserLocation}>
+        <Ionicons name="locate-outline" size={24} color="#333" />
+      </TouchableOpacity>
+
+      <View style={styles.form}>
+        <Text style={styles.label}>Animal or Collar ID</Text>
+        <TextInput
+          value={collarId}
+          onChangeText={setCollarId}
+          placeholder="e.g. Cow123"
+          style={styles.input}
+        />
+
+        <Text style={styles.label}>Fence Radius (meters)</Text>
+        <TextInput
+          value={radius.toString()}
+          onChangeText={handleRadiusChange}
+          keyboardType="numeric"
+          style={styles.input}
+        />
+
+        <Button title="Continue to Tracking" onPress={handleContinue} />
+      </View>
+    </View>
+  );
+}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
-import { routeImg } from '@/assets';
+import routeImg from "@/assets/images/route.png";
 import { useRouter } from 'expo-router';
 
 

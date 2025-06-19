@@ -10,7 +10,7 @@ interface AvatarProps {
 const Avatar = ({ imgSrc, className, containerClassName }: AvatarProps) => {
   return (
     <View className={ containerClassName }>
-        <Image source= { imgSrc } className = { className }/>
+        <Image source= { imgSrc } width={ 48 } height={ 48 } className = { className }/>
     </View>
   )
 }

@@ -12,7 +12,7 @@ import { useRouter } from "expo-router";
 import { auth, db } from "./config";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 
-type UserType = {
+export type UserType = {
     uid: string;
     email: string;
     fullName: string;
