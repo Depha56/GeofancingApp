@@ -10,9 +10,9 @@ import {
 } from "firebase/auth";
 import { useRouter } from "expo-router";
 import { auth, db } from "./config";
-import { doc, setDoc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, setDoc, getDoc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { STORAGE_KEY } from './tracking-context'; // Export STORAGE_KEY from tracking-context
+import { STORAGE_KEY } from './tracking-context';
 import { useTracking } from './tracking-context';
 
 export type UserType = {
@@ -21,6 +21,9 @@ export type UserType = {
     fullName: string;
     phoneNumber: string;
     farmId?: string;
+    address?: string;
+    role?: string;
+    photoURL?: string;
     createdAt: string;
 } | null;
 
@@ -34,6 +37,7 @@ type AuthContextType = {
     login: (email: string, password: string) => Promise<UserCredential>;
     forgotPassword: (email: string) => Promise<void>;
     logout: () => Promise<void>;
+    updateUser: (updates: Partial<UserType>) => Promise<void>;
     loading: boolean;
     initialLoading: boolean;
     error: string | null;
@@ -52,11 +56,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-            
             if (firebaseUser) {
                 // Fetch user info from Firestore
                 const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
-                
                 if (userDoc.exists()) {
                     setUser(userDoc.data() as UserType);
                 } else {
@@ -66,7 +68,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             } else {
                 setUser(null);
             }
-
             setInitialLoading(false);
         });
         return unsubscribe;
@@ -171,6 +172,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
+    // Update user information in Firestore and state
+    const updateUser = async (updates: Partial<UserType>) => {
+        if (!user?.uid || !updates) return;
+        setLoading(true);
+        try {
+            const userRef = doc(db, "users", user.uid);
+            await updateDoc(userRef, updates as { [x: string]: any });
+            // Fetch updated user info
+            const updatedDoc = await getDoc(userRef);
+            if (updatedDoc.exists()) {
+                setUser(updatedDoc.data() as UserType);
+            }
+        } catch (err: any) {
+            errorHandler(err);
+            throw err;
+        } finally {
+            setLoading(false);
+        }
+    };
+
     // Logout: clear AsyncStorage
     const logout = async () => {
         setLoading(true);
@@ -187,7 +208,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ register, login, forgotPassword, logout, loading, initialLoading, error, user }}>
+        <AuthContext.Provider value={{ register, login, forgotPassword, logout, updateUser, loading, initialLoading, error, user }}>
             {children}
         </AuthContext.Provider>
     );

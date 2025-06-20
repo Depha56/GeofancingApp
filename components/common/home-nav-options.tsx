@@ -1,7 +1,6 @@
 import { Image, Text, TouchableOpacity, View } from "react-native";
 import Avatar from "../ui/avatar";
 import ProfileDropdown from "./profile-dropdown";
-import userDefault from '@/assets/images/user-default.png';
 import bars from '@/assets/images/bars.png';
 import { Dispatch } from "react";
 import { UserType } from "@/firebase/auth-context";
@@ -9,7 +8,7 @@ import { UserType } from "@/firebase/auth-context";
 export const homeOptions = (user: UserType, setMenuVisible: Dispatch<React.SetStateAction<boolean>>, menuVisible: boolean) => ({
     headerLeft: () => (
         <Avatar
-            imgSrc={ userDefault }
+            imgSrc={ user?.photoURL || '@/assets/images/user-default.png' }
             containerClassName="rounded-full bg-white ml-3 border border-black/20"
             className="w-12 h-12 rounded-full"
         />
@@ -17,7 +16,7 @@ export const homeOptions = (user: UserType, setMenuVisible: Dispatch<React.SetSt
     headerTitle: () => (
         <View className="flex-1 items-center justify-center">
             <Text className="text-lg text-white">{ user?.fullName }</Text>
-                <Text className="text-xs text-gray-300">Kigali, Bweramvura</Text>
+                <Text className="text-xs text-gray-300">{ user?.address  ||  user?.role }</Text>
             </View>
         ),
         headerRight: () => (

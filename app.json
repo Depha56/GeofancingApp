@@ -19,7 +19,6 @@
           "backgroundColor": "#ffffff"
         }
       ],
-      "expo-secure-store",
       [
         "@rnmapbox/maps",
         {

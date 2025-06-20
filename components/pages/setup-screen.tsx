@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Fragment, Dispatch } from 'react';
 import {
   View,
   TextInput,
@@ -61,15 +61,23 @@ const styles = StyleSheet.create({
   },
 });
 
-export default function GeofenceSetupScreen() {
+interface OptionalProps {
+    updateCollarId?: string;
+    updateCenter?: [number, number];
+    updateRadius?: number;
+    setIsEditFarm?: Dispatch<React.SetStateAction<boolean>>
+}
+
+export default function GeofenceSetupScreen({ updateCollarId, updateCenter, updateRadius, setIsEditFarm }: OptionalProps) {
   const router = useRouter();
   const { setFarmData } = useTracking();
   const { user } = useAuth();
 
-  const [center, setCenter] = useState<[number, number]>([30.1127, -1.9577]);
-  const [radius, setRadius] = useState<number>(200);
-  const [collarId, setCollarId] = useState<string>('');
-  const [geojson, setGeojson] = useState<any>(() => generateCircle([30.1127, -1.9577], 300));
+  const [center, setCenter] = useState<[number, number]>(updateCenter || [30.1127, -1.9577]);
+  const [radius, setRadius] = useState<number>(updateRadius || 200);
+  const [collarId, setCollarId] = useState<string>(updateCollarId || '');
+  const [geojson, setGeojson] = useState<any>(() => generateCircle(center, radius));
+  const [loading, setLoading] = useState(false); // <-- Add loading state
 
   function generateCircle(center: [number, number], radius: number) {
     const circle = turfCircle(point(center), radius / 1000, {
@@ -140,17 +148,22 @@ export default function GeofenceSetupScreen() {
       Alert.alert('Validation', 'Please enter a collar ID');
       return;
     }
+    setLoading(true); // <-- Set loading to true
     try {
       await setFarmData(
         radius,
         { latitude: center[1], longitude: center[0] },
         [collarId],
-        user
+        user,
+        updateCollarId !== undefined
       );
-      router.replace('/(tabs)');
-    } catch {
+      setIsEditFarm?.(false);
+      router.replace("/(tabs)");
+    } catch(error) {
+      console.error('Error saving farm data:', error);
       Alert.alert('Error', 'Failed to save farm data');
     }
+    setLoading(false); // <-- Set loading to false
   };
 
   return (
@@ -196,13 +209,16 @@ export default function GeofenceSetupScreen() {
       </TouchableOpacity>
 
       <View style={styles.form}>
-        <Text style={styles.label}>Animal or Collar ID</Text>
-        <TextInput
-          value={collarId}
-          onChangeText={setCollarId}
-          placeholder="e.g. Cow123"
-          style={styles.input}
-        />
+        {!updateCollarId && 
+            <Fragment>
+                <Text style={styles.label}>Animal or Collar ID</Text>
+                <TextInput
+                    value={collarId}
+                    onChangeText={setCollarId}
+                    placeholder="e.g. Cow123"
+                    style={styles.input}
+                />
+            </Fragment>}
 
         <Text style={styles.label}>Fence Radius (meters)</Text>
         <TextInput
@@ -212,7 +228,11 @@ export default function GeofenceSetupScreen() {
           style={styles.input}
         />
 
-        <Button title="Continue to Tracking" onPress={handleContinue} />
+        <Button 
+            title={loading ? "Loading..." : (!updateRadius ? "Continue to Tracking" : "Update Tracking")}
+            onPress={handleContinue}
+            disabled={loading}
+        />
       </View>
     </View>
   );

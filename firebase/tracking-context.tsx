@@ -2,9 +2,9 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useCa
 import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "./config";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { UserType } from "./auth-context"; // <-- Import useAuth
+import { UserType } from "./auth-context";
 
-type FarmCenterCoordinates = {
+export type FarmCenterCoordinates = {
     latitude: number;
     longitude: number;
 };
@@ -24,7 +24,8 @@ type TrackingContextType = {
         farmRadius: number,
         farmCenterCoordinates: FarmCenterCoordinates,
         collarIds: string[],
-        user: UserType
+        user: UserType,
+        isUpdate?: boolean
     ) => Promise<void>;
     fetchFarmData: (farmId: string) => Promise<void>;
     sensorsFeeds: SensorFeed[];
@@ -62,10 +63,12 @@ export const TrackingProvider = ({ children }: { children: ReactNode }) => {
         farmRadius: number,
         farmCenterCoordinates: FarmCenterCoordinates,
         collarIds: string[],
-        user: UserType
+        user: UserType,
+        isUpdate: boolean = false,
     ) => {
 
-        await addUniqueCollarId(collarIds[0]);
+        if(!isUpdate)
+            await addUniqueCollarId(collarIds[0]);
 
         const newFarmId = farmId || generateFarmId();
         await setDoc(doc(db, "farms", newFarmId), {
@@ -180,8 +183,6 @@ export const TrackingProvider = ({ children }: { children: ReactNode }) => {
     // Poll sensors feeds every 30 seconds
     useEffect(() => {
         fetchSensorsFeeds();
-        const interval = setInterval(fetchSensorsFeeds, 30000);
-        return () => clearInterval(interval);
     }, [fetchSensorsFeeds]);
 
     return (

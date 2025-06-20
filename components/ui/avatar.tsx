@@ -1,8 +1,8 @@
 import React from 'react'
-import { Image, ImageSourcePropType, View } from 'react-native'
+import { Image, View } from 'react-native'
 
 interface AvatarProps {
-    imgSrc: ImageSourcePropType,
+    imgSrc: string,
     className?: string,
     containerClassName?: string
 }
@@ -10,7 +10,7 @@ interface AvatarProps {
 const Avatar = ({ imgSrc, className, containerClassName }: AvatarProps) => {
   return (
     <View className={ containerClassName }>
-        <Image source= { imgSrc } width={ 48 } height={ 48 } className = { className }/>
+        <Image source= { { uri: imgSrc } } width={ 48 } height={ 48 } className = { className }/>
     </View>
   )
 }
