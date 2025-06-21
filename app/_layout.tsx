@@ -1,6 +1,5 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
-// import * as SplashScreen from 'expo-splash-screen';
 import 'react-native-reanimated';
 import "@/scripts/global.css";
 
@@ -8,7 +7,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { AuthProvider } from '@/firebase/auth-context';
 import { TrackingProvider } from '../firebase/tracking-context';
 import { useFonts } from 'expo-font';
-import * as SplashScreen from 'expo-splash-screen';
+import { SplashScreen } from 'expo-router';
 import { useEffect } from 'react';
 import { StatusBar } from 'react-native';
 
@@ -42,7 +41,7 @@ export default function RootLayout() {
                         <Stack.Screen name="email-verification" options={{ headerShown: false }} />
                         <Stack.Screen name="not-found" />
                     </Stack>
-                    <StatusBar barStyle="light-content"  />
+                    <StatusBar barStyle="light-content" backgroundColor="#041a3a" />
                 </AuthProvider>
             </TrackingProvider>
         </ThemeProvider>

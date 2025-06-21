@@ -3,6 +3,8 @@ import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "./config";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserType } from "./auth-context";
+import * as Notifications from 'expo-notifications';
+import { Alert } from 'react-native';
 
 export type FarmCenterCoordinates = {
     latitude: number;
@@ -36,7 +38,6 @@ const TrackingContext = createContext<TrackingContextType | undefined>(undefined
 
 export const STORAGE_KEY = 'FARM_DATA'; 
 
-// Generate a short unique farmId (6 alphanumeric characters)
 const generateFarmId = () => {
     return Math.random().toString(36).substr(2, 6);
 };
@@ -48,7 +49,17 @@ export const TrackingProvider = ({ children }: { children: ReactNode }) => {
     const [collarIds, setCollarIds] = useState<string[]>([]);
     const [sensorsFeeds, setSensorsFeeds] = useState<SensorFeed[]>([]);
 
-    // Check if collarId exists, and add if unique
+    useEffect(() => {
+        const requestNotificationPermissions = async () => {
+            const { status } = await Notifications.requestPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert('Permission required', 'Please enable notifications.');
+            }
+        };
+
+        requestNotificationPermissions();
+    }, []);
+
     const addUniqueCollarId = async (collarId: string) => {
         const collarRef = doc(db, "collars", collarId);
         const collarSnap = await getDoc(collarRef);
@@ -58,7 +69,6 @@ export const TrackingProvider = ({ children }: { children: ReactNode }) => {
         await setDoc(collarRef, { collarId });
     };
 
-    // Save farm data to Firestore and AsyncStorage
     const setFarmData = async (
         farmRadius: number,
         farmCenterCoordinates: FarmCenterCoordinates,
@@ -66,7 +76,6 @@ export const TrackingProvider = ({ children }: { children: ReactNode }) => {
         user: UserType,
         isUpdate: boolean = false,
     ) => {
-
         if(!isUpdate)
             await addUniqueCollarId(collarIds[0]);
 
@@ -80,7 +89,6 @@ export const TrackingProvider = ({ children }: { children: ReactNode }) => {
             collarIds,
         });
 
-        // Update logged-in user's Firestore document with farmId
         if (user?.uid) {
             await updateDoc(doc(db, "users", user.uid), {
                 farmId: newFarmId,
@@ -98,7 +106,6 @@ export const TrackingProvider = ({ children }: { children: ReactNode }) => {
         setCollarIds(collarIds);
     };
 
-    // Fetch farm data from Firestore
     const fetchFarmData = useCallback(async (farmId: string) => {
         const docSnap = await getDoc(doc(db, "farms", farmId));
         if (docSnap.exists()) {
@@ -107,7 +114,7 @@ export const TrackingProvider = ({ children }: { children: ReactNode }) => {
             setFarmRadius(data.farmRadius);
             setFarmCenterCoordinates(data.farmCenterCoordinates);
             setCollarIds(data.collarIds || []);
-            
+
             await AsyncStorage.setItem(
                 STORAGE_KEY,
                 JSON.stringify({
@@ -120,7 +127,34 @@ export const TrackingProvider = ({ children }: { children: ReactNode }) => {
         }
     }, []);
 
-    // Fetch sensors feeds from ThingSpeak API
+    const isOutsideGeofence = (sensor: SensorFeed, center: FarmCenterCoordinates, radius: number) => {
+        const toRad = (deg: number) => deg * (Math.PI / 180);
+        const R = 6371e3;
+        const φ1 = toRad(center.latitude);
+        const φ2 = toRad(sensor.latitude);
+        const Δφ = toRad(sensor.latitude - center.latitude);
+        const Δλ = toRad(sensor.longitude - center.longitude);
+
+        const a = Math.sin(Δφ / 2) ** 2 +
+                  Math.cos(φ1) * Math.cos(φ2) *
+                  Math.sin(Δλ / 2) ** 2;
+
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        const distance = R * c;
+
+        return distance > radius;
+    };
+
+    const sendNotification = async (title: string, body: string) => {
+        await Notifications.scheduleNotificationAsync({
+            content: {
+                title,
+                body,
+            },
+            trigger: null,
+        });
+    };
+
     const fetchSensorsFeeds = useCallback(async () => {
         try {
             const res = await fetch(
@@ -128,14 +162,11 @@ export const TrackingProvider = ({ children }: { children: ReactNode }) => {
             );
             const data = await res.json();
             if (data.feeds && Array.isArray(data.feeds)) {
-                // Map to latest feed per collarId
                 const latestFeeds: Record<string, { feed: any; created_at: string }> = {};
                 data.feeds.forEach((feed: any) => {
                     const collarId = feed.field2;
                     const createdAt = feed.created_at;
-                    
                     if (!collarId || !feed.field1) return;
-                    
                     if (!latestFeeds[collarId] || new Date(createdAt) > new Date(latestFeeds[collarId].created_at)) {
                         latestFeeds[collarId] = { feed, created_at: createdAt };
                     }
@@ -151,15 +182,27 @@ export const TrackingProvider = ({ children }: { children: ReactNode }) => {
                         };
                     })
                     .filter(feed => collarIds.includes(feed.collarId));
+
                 setSensorsFeeds(feedsArr);
+
+                if (farmCenterCoordinates && farmRadius) {
+                    feedsArr.forEach(async (sensor) => {
+                        const outside = isOutsideGeofence(sensor, farmCenterCoordinates, farmRadius);
+                        if (outside) {
+                            await sendNotification(
+                                'Animal Out of Bounds',
+                                `Collar ${sensor.collarId} is outside the farm geofence.`
+                            );
+                        }
+                    });
+                }
             }
         } catch (e) {
             console.error("Error fetching sensors feeds:", e);
             setSensorsFeeds([]);
         }
-    }, [collarIds]);
+    }, [collarIds, farmCenterCoordinates, farmRadius]);
 
-    // On mount, load farm data from AsyncStorage
     useEffect(() => {
         const loadFarmDataFromStorage = async () => {
             const stored = await AsyncStorage.getItem(STORAGE_KEY);
@@ -171,7 +214,6 @@ export const TrackingProvider = ({ children }: { children: ReactNode }) => {
                     setFarmCenterCoordinates(farmCenterCoordinates);
                     setCollarIds(collarIds || []);
                 } catch (e) {
-                    // Optionally handle error
                     console.error("Error parsing stored farm data:", e);
                     setFarmId(null);
                 }
@@ -180,7 +222,6 @@ export const TrackingProvider = ({ children }: { children: ReactNode }) => {
         loadFarmDataFromStorage();
     }, []);
 
-    // Poll sensors feeds every 30 seconds
     useEffect(() => {
         fetchSensorsFeeds();
     }, [fetchSensorsFeeds]);

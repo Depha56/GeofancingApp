@@ -20,7 +20,7 @@ const Profile = () => {
     const [saving, setSaving] = useState(false);
 
     // State for profile image
-    const [profileImage, setProfileImage] = useState(user?.photoURL || "https://randomuser.me/api/portraits/men/75.jpg");
+    const [profileImage, setProfileImage] = useState(user?.photoURL);
     const [uploading, setUploading] = useState(false);
 
     useEffect(() => {
@@ -193,10 +193,13 @@ const Profile = () => {
 
                     {/* Profile Image with Edit Icon */}
                     <View className="mb-4">
-                        <Image
-                            source={{ uri: profileImage }}
-                            className="w-32 h-32 rounded-full border-4 border-blue-500"
-                        />
+                        {profileImage ?
+                            <Image
+                                source={{ uri: profileImage }}
+                                className="w-32 h-32 rounded-full border-4 border-blue-500"
+                            />
+                            : <FontAwesome name="user-circle-o" size={100} color="#a0745c" />
+                        }
                         <TouchableOpacity
                             className="absolute bottom-2 right-2 bg-white p-2 rounded-full border border-gray-300"
                             style={{ position: 'absolute', bottom: 0, right: 0 }}

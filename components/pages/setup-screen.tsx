@@ -7,15 +7,12 @@ import {
   StyleSheet,
   Alert,
   TouchableOpacity,
-  PermissionsAndroid,
-  Platform,
 } from 'react-native';
 import MapboxGL from '@rnmapbox/maps';
 import { useRouter } from 'expo-router';
 import turfCircle from '@turf/circle';
 import { featureCollection, point } from '@turf/helpers';
-import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
-import Geolocation from '@react-native-community/geolocation';
+import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { useTracking } from '@/firebase/tracking-context';
 import { useAuth } from '@/firebase/auth-context';
@@ -62,22 +59,31 @@ const styles = StyleSheet.create({
 });
 
 interface OptionalProps {
-    updateCollarId?: string;
-    updateCenter?: [number, number];
-    updateRadius?: number;
-    setIsEditFarm?: Dispatch<React.SetStateAction<boolean>>
+  updateCollarId?: string;
+  updateCenter?: [number, number];
+  updateRadius?: number;
+  setIsEditFarm?: Dispatch<React.SetStateAction<boolean>>;
 }
 
-export default function GeofenceSetupScreen({ updateCollarId, updateCenter, updateRadius, setIsEditFarm }: OptionalProps) {
+export default function GeofenceSetupScreen({
+  updateCollarId,
+  updateCenter,
+  updateRadius,
+  setIsEditFarm,
+}: OptionalProps) {
   const router = useRouter();
   const { setFarmData } = useTracking();
   const { user } = useAuth();
 
-  const [center, setCenter] = useState<[number, number]>(updateCenter || [30.1127, -1.9577]);
+  const [center, setCenter] = useState<[number, number]>(
+    updateCenter || [30.1127, -1.9577]
+  );
   const [radius, setRadius] = useState<number>(updateRadius || 200);
   const [collarId, setCollarId] = useState<string>(updateCollarId || '');
-  const [geojson, setGeojson] = useState<any>(() => generateCircle(center, radius));
-  const [loading, setLoading] = useState(false); // <-- Add loading state
+  const [geojson, setGeojson] = useState<any>(() =>
+    generateCircle(center, radius)
+  );
+  const [loading, setLoading] = useState(false);
 
   function generateCircle(center: [number, number], radius: number) {
     const circle = turfCircle(point(center), radius / 1000, {
@@ -89,12 +95,12 @@ export default function GeofenceSetupScreen({ updateCollarId, updateCenter, upda
 
   useEffect(() => {
     const checkPermissions = async () => {
-      const status = await check(PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION);
-      if (status !== RESULTS.GRANTED) {
-        const requestStatus = await request(PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION);
-        if (requestStatus !== RESULTS.GRANTED) {
-          Alert.alert('Location Permission Required', 'Please enable location permissions to use this feature.');
-        }
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(
+          'Permission Required',
+          'Location access is needed to use this map'
+        );
       }
     };
 
@@ -103,31 +109,23 @@ export default function GeofenceSetupScreen({ updateCollarId, updateCenter, upda
 
   const centerOnUserLocation = async () => {
     try {
-      if (Platform.OS === 'android') {
-        const granted = await PermissionsAndroid.request(
-          PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
-        );
-        if (granted !== PermissionsAndroid.RESULTS.GRANTED) {
-          Alert.alert('Permission Denied', 'Location permission is required');
-          return;
-        }
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Location permission is required');
+        return;
       }
 
-      Geolocation.getCurrentPosition(
-        (position) => {
-          const { latitude, longitude } = position.coords;
-          const newCenter: [number, number] = [longitude, latitude];
-          setCenter(newCenter);
-          setGeojson(generateCircle(newCenter, radius));
-        },
-        (error) => {
-          Alert.alert('Error', 'Could not fetch location');
-          console.error(error);
-        },
-        { enableHighAccuracy: true }
-      );
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+
+      const { latitude, longitude } = location.coords;
+      const newCenter: [number, number] = [longitude, latitude];
+      setCenter(newCenter);
+      setGeojson(generateCircle(newCenter, radius));
     } catch (err) {
-      console.error('Permission error', err);
+      console.error('Location error:', err);
+      Alert.alert('Error', 'Could not fetch location');
     }
   };
 
@@ -148,7 +146,7 @@ export default function GeofenceSetupScreen({ updateCollarId, updateCenter, upda
       Alert.alert('Validation', 'Please enter a collar ID');
       return;
     }
-    setLoading(true); // <-- Set loading to true
+    setLoading(true);
     try {
       await setFarmData(
         radius,
@@ -158,12 +156,12 @@ export default function GeofenceSetupScreen({ updateCollarId, updateCenter, upda
         updateCollarId !== undefined
       );
       setIsEditFarm?.(false);
-      router.replace("/(tabs)");
-    } catch(error) {
+      router.replace('/(tabs)');
+    } catch (error) {
       console.error('Error saving farm data:', error);
       Alert.alert('Error', 'Failed to save farm data');
     }
-    setLoading(false); // <-- Set loading to false
+    setLoading(false);
   };
 
   return (
@@ -204,21 +202,25 @@ export default function GeofenceSetupScreen({ updateCollarId, updateCenter, upda
         </MapboxGL.ShapeSource>
       </MapboxGL.MapView>
 
-      <TouchableOpacity style={styles.locateButton} onPress={centerOnUserLocation}>
+      <TouchableOpacity
+        style={styles.locateButton}
+        onPress={centerOnUserLocation}
+      >
         <Ionicons name="locate-outline" size={24} color="#333" />
       </TouchableOpacity>
 
       <View style={styles.form}>
-        {!updateCollarId && 
-            <Fragment>
-                <Text style={styles.label}>Animal or Collar ID</Text>
-                <TextInput
-                    value={collarId}
-                    onChangeText={setCollarId}
-                    placeholder="e.g. Cow123"
-                    style={styles.input}
-                />
-            </Fragment>}
+        {!updateCollarId && (
+          <Fragment>
+            <Text style={styles.label}>Animal or Collar ID</Text>
+            <TextInput
+              value={collarId}
+              onChangeText={setCollarId}
+              placeholder="e.g. Cow123"
+              style={styles.input}
+            />
+          </Fragment>
+        )}
 
         <Text style={styles.label}>Fence Radius (meters)</Text>
         <TextInput
@@ -228,10 +230,16 @@ export default function GeofenceSetupScreen({ updateCollarId, updateCenter, upda
           style={styles.input}
         />
 
-        <Button 
-            title={loading ? "Loading..." : (!updateRadius ? "Continue to Tracking" : "Update Tracking")}
-            onPress={handleContinue}
-            disabled={loading}
+        <Button
+          title={
+            loading
+              ? 'Loading...'
+              : !updateRadius
+              ? 'Continue to Tracking'
+              : 'Update Tracking'
+          }
+          onPress={handleContinue}
+          disabled={loading}
         />
       </View>
     </View>

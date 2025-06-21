@@ -8,7 +8,7 @@ import { UserType } from "@/firebase/auth-context";
 export const homeOptions = (user: UserType, setMenuVisible: Dispatch<React.SetStateAction<boolean>>, menuVisible: boolean) => ({
     headerLeft: () => (
         <Avatar
-            imgSrc={ user?.photoURL || '@/assets/images/user-default.png' }
+            imgSrc={ user?.photoURL }
             containerClassName="rounded-full bg-white ml-3 border border-black/20"
             className="w-12 h-12 rounded-full"
         />
@@ -19,19 +19,19 @@ export const homeOptions = (user: UserType, setMenuVisible: Dispatch<React.SetSt
                 <Text className="text-xs text-gray-300">{ user?.address  ||  user?.role }</Text>
             </View>
         ),
-        headerRight: () => (
-            <View className="relative">
-                <TouchableOpacity onPress={() => setMenuVisible((v) => !v)}>
-                    <Image source={bars} className="w-10 h-10 mr-3" />
-                </TouchableOpacity>
-                {menuVisible && (
-                    <ProfileDropdown setMenuVisible={setMenuVisible} />
-                )}
-            </View>
-        ),
-        headerTitleAlign: "center",
-        headerShadowVisible: true,
-        headerStyle: {
-            backgroundColor: '#103060'
-        },
+    headerRight: () => (
+        <View className="relative">
+            <TouchableOpacity onPress={() => setMenuVisible((v) => !v)}>
+                <Image source={bars} className="w-10 h-10 mr-3" />
+            </TouchableOpacity>
+            {menuVisible && (
+                <ProfileDropdown setMenuVisible={setMenuVisible} />
+            )}
+        </View>
+    ),
+    headerTitleAlign: "center",
+    headerShadowVisible: true,
+    headerStyle: {
+        backgroundColor: '#103060'
+    },
 })

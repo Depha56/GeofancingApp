@@ -1,0 +1,25 @@
+{
+    "compilerOptions": {
+        "target": "ESNext",
+        "module": "CommonJS",
+        "baseUrl": ".",
+        "paths": {
+            "@/*": ["*"]
+        },
+        "moduleResolution": "Node",
+        "outDir": "dist",
+        "importsNotUsedAsValues": "remove",
+        "strict": true,
+        "esModuleInterop": true,
+        "skipLibCheck": true,
+        "forceConsistentCasingInFileNames": true,
+    },
+    "include": [
+        "app.ts",
+        "config/**/*",
+        "controllers/**/*",
+        "models/**/*",
+        "routes/**/*"
+    ],
+    "exclude": ["node_modules"]
+}
