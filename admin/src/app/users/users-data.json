@@ -1,0 +1,82 @@
+[
+  {
+    "id": 1,
+    "name": "John Smith",
+    "email": "john.smith@farm.com",
+    "role": "Admin",
+    "status": "Active",
+    "lastLogin": "2024-01-15 09:30",
+    "createdAt": "2024-01-01",
+    "permissions": ["full_access"]
+  },
+  {
+    "id": 2,
+    "name": "Sarah Johnson",
+    "email": "sarah.johnson@farm.com",
+    "role": "Manager",
+    "status": "Active",
+    "lastLogin": "2024-01-15 08:45",
+    "createdAt": "2024-01-02",
+    "permissions": ["view_livestock", "manage_alerts"]
+  },
+  {
+    "id": 3,
+    "name": "Mike Wilson",
+    "email": "mike.wilson@farm.com",
+    "role": "Viewer",
+    "status": "Inactive",
+    "lastLogin": "2024-01-10 14:20",
+    "createdAt": "2024-01-03",
+    "permissions": ["view_livestock"]
+  },
+  {
+    "id": 4,
+    "name": "Emily Davis",
+    "email": "emily.davis@farm.com",
+    "role": "Manager",
+    "status": "Active",
+    "lastLogin": "2024-01-15 07:15",
+    "createdAt": "2024-01-04",
+    "permissions": ["view_livestock", "manage_alerts", "manage_geofences"]
+  },
+  {
+    "id": 5,
+    "name": "Robert Brown",
+    "email": "robert.brown@farm.com",
+    "role": "Viewer",
+    "status": "Active",
+    "lastLogin": "2024-01-14 16:30",
+    "createdAt": "2024-01-05",
+    "permissions": ["view_livestock"]
+  },
+  {
+    "id": 6,
+    "name": "Lisa Anderson",
+    "email": "lisa.anderson@farm.com",
+    "role": "Admin",
+    "status": "Active",
+    "lastLogin": "2024-01-15 10:00",
+    "createdAt": "2024-01-06",
+    "permissions": ["full_access"]
+  },
+  {
+    "id": 7,
+    "name": "David Martinez",
+    "email": "david.martinez@farm.com",
+    "role": "Manager",
+    "status": "Pending",
+    "lastLogin": "Never",
+    "createdAt": "2024-01-15",
+    "permissions": ["view_livestock", "manage_alerts"]
+  },
+  {
+    "id": 8,
+    "name": "Jennifer Taylor",
+    "email": "jennifer.taylor@farm.com",
+    "role": "Viewer",
+    "status": "Active",
+    "lastLogin": "2024-01-13 11:45",
+    "createdAt": "2024-01-07",
+    "permissions": ["view_livestock"]
+  }
+]
