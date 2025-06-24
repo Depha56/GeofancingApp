@@ -10,6 +10,7 @@ import {
   DocumentData,
   QueryDocumentSnapshot,
 } from "firebase/firestore";
+import { getAuth, sendPasswordResetEmail } from "firebase/auth";
 import { AdminUserType } from "./use-auth";
 
 type UserNoNull = Exclude<AdminUserType, null>;
@@ -20,6 +21,7 @@ type UsersContextType = {
   addUser: (user: Omit<UserNoNull, "uid"> & { password: string }) => Promise<void>;
   deleteUser: (uid: string) => Promise<void>;
   updateUser: (uid: string, updates: Partial<UserNoNull>) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   fetchUsers: () => Promise<void>;
 };
 
@@ -69,7 +71,7 @@ export const UsersProvider = ({ children }: { children: ReactNode }) => {
     setLoading(true);
     try {
       await deleteDoc(doc(db, "users", uid));
-      setUsers((prev) => prev.filter((u) => u && u.uid !== uid));
+      await fetchUsers();
     } finally {
       setLoading(false);
     }
@@ -85,8 +87,13 @@ export const UsersProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const resetPassword = async (email: string) => {
+    const auth = getAuth();
+    await sendPasswordResetEmail(auth, email);
+  };
+
   return (
-    <UsersContext.Provider value={{ users, loading, addUser, deleteUser, updateUser, fetchUsers }}>
+    <UsersContext.Provider value={{ users, loading, addUser, deleteUser, updateUser, fetchUsers, resetPassword }}>
       {children}
     </UsersContext.Provider>
   );

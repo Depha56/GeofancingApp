@@ -10,6 +10,7 @@ import DashboardLayout from 'components/layouts/user-dashboard';
 import SimpleLayout from 'components/layouts/simple-layout';
 import { AuthProvider } from './hooks/use-auth'
 import { UsersProvider } from './hooks/use-users'
+import { TrackingProvider } from './hooks/use-tracking'
 
 const container = document.getElementById('root') as HTMLDivElement
 const root = createRoot(container)
@@ -41,7 +42,9 @@ root.render(
         <BrowserRouter>
             <AuthProvider>
                 <UsersProvider>
+                  <TrackingProvider>
                     <App />
+                  </TrackingProvider>
                 </UsersProvider>
             </AuthProvider>
         </BrowserRouter>

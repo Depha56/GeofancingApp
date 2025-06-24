@@ -6,7 +6,7 @@ import {
     onAuthStateChanged,
 } from "firebase/auth";
 import { auth, db } from "../lib/config";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 
 export type AdminUserType = {
         uid: string;
@@ -40,7 +40,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
             if (firebaseUser) {
-                // Fetch user info from Firestore
                 const userDoc = await getDoc(doc(db, "users", firebaseUser.uid));
                 if (userDoc.exists()) {
                     setUser(userDoc.data() as AdminUserType);
@@ -63,11 +62,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return unsubscribe;
     }, []);
 
+    // Function to update lastLogin field in Firestore
+    const updateLastLogin = async (uid: string) => {
+        const userRef = doc(db, "users", uid);
+        await updateDoc(userRef, { lastLogin: new Date().toISOString() });
+    };
+
     const login = async (email: string, password: string) => {
         setLoading(true);
         try {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
-            // Fetch user info from Firestore
             const { uid } = userCredential.user;
             const userDoc = await getDoc(doc(db, "users", uid));
             if (userDoc.exists()) {
@@ -78,6 +82,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     throw new Error("Access denied: You need higher Permissions.");
                 }
                 setUser(userData);
+                await updateLastLogin(uid); // Track last login
             } else {
                 setUser({
                     uid,

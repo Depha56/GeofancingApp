@@ -140,17 +140,6 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
     enableHiding: false,
   },
   {
-    accessorKey: "tagNumber",
-    header: "Tag",
-    cell: ({ row }) => (
-      <div className="w-20">
-        <Badge variant="outline" className="px-1.5 text-muted-foreground">
-          {row.original.tagNumber}
-        </Badge>
-      </div>
-    ),
-  },
-  {
     accessorKey: "location",
     header: "Location",
     cell: ({ row }) => <div className="w-32">{row.original.location}</div>,
@@ -172,24 +161,6 @@ const columns: ColumnDef<z.infer<typeof schema>>[] = [
         )}
         {row.original.status}
       </Badge>
-    ),
-  },
-  {
-    accessorKey: "batteryLevel",
-    header: () => <div className="w-full text-right">Battery</div>,
-    cell: ({ row }) => (
-      <div className="text-right">
-        <Badge
-          variant="outline"
-          className={`px-1.5 ${
-            Number.parseInt(row.original.batteryLevel) > 50
-              ? "text-green-600 border-green-200"
-              : "text-orange-600 border-orange-200"
-          }`}
-        >
-          {row.original.batteryLevel}
-        </Badge>
-      </div>
     ),
   },
   {

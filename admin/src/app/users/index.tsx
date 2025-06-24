@@ -4,18 +4,6 @@ import { useUsers } from "@/hooks/use-users"
 export default function UsersPage() {
   const { users, loading } = useUsers();
 
-  // Map Firestore users to the table schema if needed
-  const tableData = users.map((u, idx) => ({
-    id: idx + 1,
-    name: u.fullName || "",
-    email: u.email,
-    role: u.role || "",
-    status: u.status || "Active",
-    lastLogin: u.lastLogin || "Never",
-    createdAt: u.createdAt || "",
-    permissions: u.permissions || [],
-  }));
-
   return (
     <div className="flex flex-1 flex-col">
       <div className="@container/main flex flex-1 flex-col gap-2">
@@ -31,7 +19,7 @@ export default function UsersPage() {
           {loading ? (
             <div className="flex justify-center py-10">Loading users...</div>
           ) : (
-            <UsersTable data={tableData} />
+            <UsersTable data={ users } />
           )}
         </div>
       </div>

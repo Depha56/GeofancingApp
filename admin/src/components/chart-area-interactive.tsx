@@ -1,7 +1,6 @@
-"use client"
-
 import * as React from "react"
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
+import { useTracking } from "@/hooks/use-tracking"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -9,20 +8,6 @@ import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } f
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 // Update the chart data to represent hourly movement activity
-const chartData = [
-  { time: "00:00", activity: 12, grazing: 8 },
-  { time: "02:00", activity: 8, grazing: 5 },
-  { time: "04:00", activity: 15, grazing: 12 },
-  { time: "06:00", activity: 45, grazing: 38 },
-  { time: "08:00", activity: 78, grazing: 65 },
-  { time: "10:00", activity: 92, grazing: 85 },
-  { time: "12:00", activity: 67, grazing: 45 },
-  { time: "14:00", activity: 58, grazing: 42 },
-  { time: "16:00", activity: 73, grazing: 68 },
-  { time: "18:00", activity: 89, grazing: 82 },
-  { time: "20:00", activity: 45, grazing: 35 },
-  { time: "22:00", activity: 23, grazing: 18 },
-]
 
 const chartConfig = {
   activity: {
@@ -37,13 +22,45 @@ const chartConfig = {
 
 export function ChartAreaInteractive() {
   const isMobile = useIsMobile()
-  const [timeRange, setTimeRange] = React.useState("30d")
+  const [timeRange, setTimeRange] = React.useState("24h")
+  const [chartData, setChartData] = React.useState<any[]>([])
+  const { fetchAllFeeds } = useTracking()
 
   React.useEffect(() => {
-    if (isMobile) {
-      setTimeRange("7d")
-    }
+    if (isMobile) setTimeRange("24h")
   }, [isMobile])
+
+  React.useEffect(() => {
+    fetchAllFeeds().then((allFeeds) => {
+      // Get today's date in YYYY-MM-DD
+      const today = new Date();
+      const todayStr = today.toISOString().slice(0, 10);
+
+      // Group by hour for only today's feeds
+      const hours = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, "0")}:00`);
+      const data = hours.map(hour => ({
+        time: hour,
+        activity: 0,
+        grazing: 0,
+      }));
+
+      allFeeds.forEach(feed => {
+        if (!feed.createdAt) return;
+        const date = new Date(feed.createdAt);
+        const feedDayStr = date.toISOString().slice(0, 10);
+        if (feedDayStr !== todayStr) return; // Only today's feeds
+
+        const hourStr = date.getHours().toString().padStart(2, "0") + ":00";
+        const idx = data.findIndex(d => d.time === hourStr);
+        if (idx !== -1) {
+          if (feed.animalBehaviour === "MOVING") data[idx].activity += 1;
+          if (feed.animalBehaviour === "GRAZING") data[idx].grazing += 1;
+        }
+      });
+
+      setChartData(data);
+    });
+  }, [fetchAllFeeds])
 
   const filteredData = chartData.filter((item) => {
     const date = new Date()

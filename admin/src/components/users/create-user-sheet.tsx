@@ -30,7 +30,7 @@ export default function CreateUserSheet({ open: controlledOpen, onOpenChange, us
   // Form state
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
-  const [role, setRole] = useState("Admin")
+  const [role, setRole] = useState("admin")
   const [status, setStatus] = useState("Active")
   const [password, setPassword] = useState("")
   const [address, setAddress] = useState("")
@@ -41,7 +41,7 @@ export default function CreateUserSheet({ open: controlledOpen, onOpenChange, us
     if (isEdit && userToEdit) {
       setFullName(userToEdit.fullName || "")
       setEmail(userToEdit.email || "")
-      setRole(userToEdit.role || "Admin")
+      setRole(userToEdit.role || "admin")
       setStatus(userToEdit.status || "Active")
       setAddress(userToEdit.address || "")
       setNotes(userToEdit.notes || "")
@@ -55,7 +55,7 @@ export default function CreateUserSheet({ open: controlledOpen, onOpenChange, us
     if (!open && !controlledOpen) {
       setFullName("")
       setEmail("")
-      setRole("Admin")
+      setRole("admin")
       setStatus("Active")
       setPassword("")
       setAddress("")
@@ -158,8 +158,8 @@ export default function CreateUserSheet({ open: controlledOpen, onOpenChange, us
                   <SelectValue placeholder="Select role" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Admin">Admin</SelectItem>
-                  <SelectItem value="Farmer">Farmer</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="farmer">Farmer</SelectItem>
                 </SelectContent>
               </Select>
             </div>
