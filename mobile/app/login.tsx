@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
 import { useAuth } from '@/firebase/auth-context';
 import Header from '@/components/layout/header';
-import verificationIcon from '@/assets/images/verification-icon.png';
+import signinIcon from '@/assets/images/signin_img.png';
 
 export default function LoginScreen() {
     const router = useRouter();
@@ -12,6 +12,11 @@ export default function LoginScreen() {
     const [password, setPassword] = useState('');
     const [keepLoggedIn, setKeepLoggedIn] = useState(false);
     const [localError, setLocalError] = useState<string | null>(null);
+    const navigation = useNavigation();
+
+    useEffect(() => {
+      navigation.setOptions({ headerShown: false });
+    }, [navigation]);
 
     const handleLogin = async () => {
         setLocalError(null);
@@ -31,15 +36,8 @@ export default function LoginScreen() {
 
     return (
         <ScrollView className="bg-white h-full w-full">
-            {/* Image Header */}
-            {/* <View className="w-full items-center justify-center ">
-                <Image 
-                    source={signInIcon} 
-                    className="w-full object-contain"
-                />
-            </View> */}
             <Header
-                icon={ verificationIcon }
+                icon={ signinIcon }
                 title="Login"
             />
 
@@ -86,7 +84,7 @@ export default function LoginScreen() {
                 )}
                 {/* Login Button */}
                 <TouchableOpacity 
-                    className="w-full bg-blue-500 py-3 rounded-lg mb-6 flex items-center justify-center"
+                    className="w-full bg-primary py-3 rounded-lg mb-6 flex items-center justify-center"
                     onPress={handleLogin}
                     disabled={loading}
                 >
@@ -100,7 +98,7 @@ export default function LoginScreen() {
                 <View className="flex flex-row mb-2 justify-center">
                     <Text className="text-gray-600">Don't have an account yet? </Text>
                     <TouchableOpacity onPress={handleSignUp}>
-                        <Text className="text-blue-500 font-semibold">Sign Up</Text>
+                        <Text className="text-primary font-semibold">Sign Up</Text>
                     </TouchableOpacity>
                 </View>
             </View>

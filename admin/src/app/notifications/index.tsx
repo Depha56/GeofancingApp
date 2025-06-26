@@ -1,11 +1,14 @@
 import { NotificationsPanel } from "@/components/notifications-panel";
+import { NotificationsProvider } from "@/hooks/use-notifications";
 
 export default function NotificationsPage() {
   return (
-    <div className="flex flex-1 flex-col">
-        <div className="@container/main flex flex-1 flex-col gap-2">
-          <NotificationsPanel />
+    <NotificationsProvider>
+        <div className="flex flex-1 flex-col">
+            <div className="@container/main flex flex-1 flex-col gap-2">
+            <NotificationsPanel />
+            </div>
         </div>
-    </div>
+    </NotificationsProvider>
   )
 }

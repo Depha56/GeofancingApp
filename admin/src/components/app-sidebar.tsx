@@ -8,6 +8,7 @@ import {
   SearchIcon,
   SettingsIcon,
   UsersIcon,
+  Circle
 } from "lucide-react"
 
 import { NavMain } from "@/components/nav-main"
@@ -22,8 +23,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
-import { Link } from "react-router-dom"
 import { useAuth } from "@/hooks/use-auth"
+
 
 const data = {
   navMain: [
@@ -46,6 +47,11 @@ const data = {
       title: "Notifications",
       url: "/notifications",
       icon: BellIcon,
+    },
+    {
+      title: "Collars",
+      url: "/collars",
+      icon: Circle,
     },
   ],
   navSecondary: [
@@ -77,10 +83,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton asChild className="data-[slot=sidebar-menu-button]:!p-1.5 hover:bg-transparent">
-                        <p>
-                            <ArrowUpCircleIcon className="h-5 w-5" />
-                            <span className="text-base font-semibold">Livestock Monitor</span>
-                        </p>
+                        <div>
+                            <p><img src="/icon.png" className="h-10 w-10" /></p>
+                            <p  className="text-base font-semibold">Livestock</p>
+                        </div>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
             </SidebarMenu>

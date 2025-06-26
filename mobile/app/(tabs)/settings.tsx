@@ -13,7 +13,7 @@ export default function Settings() {
     const { user } = useAuth();
     const { farmRadius, farmCenterCoordinates, collarIds } = useTracking();
     const [isEditFarm, setIsEditFarm ] = useState(false);
-    const updateCenterCoordinates: [number, number] = farmCenterCoordinates ? [farmCenterCoordinates.latitude, farmCenterCoordinates.longitude] : [30.1127, -1.9577]
+    const updateCenterCoordinates: [number, number] = farmCenterCoordinates ? [farmCenterCoordinates.longitude, farmCenterCoordinates.latitude] : [30.1127, -1.9577]
 
     useEffect(() => {
         navigation.setOptions(homeOptions(user, setMenuVisible, menuVisible));

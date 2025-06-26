@@ -144,8 +144,8 @@ export const TrackingProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     fetchBoundaries();
     fetchFeeds();
-    // const interval = setInterval(fetchFeeds, 30000);
-    // return () => clearInterval(interval);
+    const interval = setInterval(fetchFeeds, 16000);
+    return () => clearInterval(interval);
   }, [fetchBoundaries, fetchFeeds]);
 
   return (

@@ -1,10 +1,17 @@
 import Header from '@/components/layout/header';
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Text, TextInput, TouchableOpacity, View } from 'react-native';
 import verificationIcon from "@/assets/images/verification-icon.png";
+import { useNavigation } from 'expo-router';
 
 
 const EmailVerification = () => {
+  
+  const navigation = useNavigation();
+  useEffect(() => {
+    navigation.setOptions({ headerShown: false });
+  }, [navigation]);
+
   return (
     <View className="items-center">
         <Header

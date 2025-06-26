@@ -1,7 +1,5 @@
-import { MailIcon, type LucideIcon } from "lucide-react"
+import { type LucideIcon } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
-
-import { Button } from "@/components/ui/button"
 import { QuickCreateMenu } from "@/components/quick-create-menu"
 import {
   SidebarGroup,
@@ -25,11 +23,6 @@ export function NavMain({
   return (
     <SidebarGroup>
       <SidebarGroupContent className="flex flex-col gap-2">
-        <SidebarMenu>
-          <SidebarMenuItem className="flex items-center gap-2">
-            <QuickCreateMenu />
-          </SidebarMenuItem>
-        </SidebarMenu>
         <SidebarMenu>
           {items.map((item) => {
             const isActive = pathname === item.url

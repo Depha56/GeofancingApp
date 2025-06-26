@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useNavigation, useRouter } from 'expo-router';
 import { useAuth } from '@/firebase/auth-context';
 import Header from '@/components/layout/header';
-import verificationIcon from '@/assets/images/verification-icon.png';
+import signUpIcon from '@/assets/images/signin_img.png';
 
 export default function SignUpScreen() {
     const router = useRouter();
@@ -14,6 +14,11 @@ export default function SignUpScreen() {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [localError, setLocalError] = useState<string | null>(null);
+    const navigation = useNavigation();
+
+    useEffect(() => {
+      navigation.setOptions({ headerShown: false });
+    }, [navigation]);
 
     const handleSignUp = async () => {
         setLocalError(null);
@@ -36,21 +41,13 @@ export default function SignUpScreen() {
 
     return (
         <ScrollView className="bg-white h-full w-full">
-            {/* Image Header */}
-            {/* <View className="w-full">
-                <Image 
-                    source={signUpIcon} 
-                    className="pb-2 object-contain relative w-full"
-                    style={{ resizeMode: "cover"}}
-                />
-            </View> */}
             <Header
-                icon={ verificationIcon }
+                icon={ signUpIcon }
                 title="Sign Up"
             />
 
             {/* Sign Up Form */}
-            <View className="px-8 w-full mt-20">
+            <View className="px-8 w-full mt-10">
                 {/* Full Name Input */}
                 <View className="w-full mb-4">
                     <Text className="text-gray-600 mb-2">Enter Full Name</Text>
@@ -112,7 +109,7 @@ export default function SignUpScreen() {
                 )}
                 {/* Sign Up Button */}
                 <TouchableOpacity 
-                    className="w-full bg-blue-500 py-3 rounded-lg mb-6 flex items-center justify-center"
+                    className="w-full bg-primary py-3 rounded-lg mb-6 flex items-center justify-center"
                     onPress={handleSignUp}
                     disabled={loading}
                 >
@@ -126,7 +123,7 @@ export default function SignUpScreen() {
                 <View className="flex mb-3 flex-row justify-center">
                     <Text className="text-gray-600">Already have an account? </Text>
                     <TouchableOpacity onPress={handleLogin}>
-                        <Text className="text-blue-500 font-semibold">Log In</Text>
+                        <Text className="text-primary font-semibold">Log In</Text>
                     </TouchableOpacity>
                 </View>
             </View>

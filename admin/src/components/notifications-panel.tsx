@@ -30,65 +30,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-
-// Mock notifications data
-const notifications = [
-  {
-    id: 1,
-    type: "geofence_breach",
-    priority: "critical",
-    title: "Geofence Breach Alert",
-    message: "COW-003 (Molly) has left the designated safe zone",
-    timestamp: "2024-01-15 14:30:25",
-    animalId: "COW-003",
-    read: false,
-    acknowledged: false,
-  },
-  {
-    id: 2,
-    type: "low_battery",
-    priority: "warning",
-    title: "Low Battery Warning",
-    message: "COW-005 (Bella) sensor battery is at 45%",
-    timestamp: "2024-01-15 13:45:12",
-    animalId: "COW-005",
-    read: false,
-    acknowledged: true,
-  },
-  {
-    id: 3,
-    type: "sensor_offline",
-    priority: "critical",
-    title: "Sensor Offline",
-    message: "COW-007 sensor has been offline for 15 minutes",
-    timestamp: "2024-01-15 13:15:08",
-    animalId: "COW-007",
-    read: true,
-    acknowledged: false,
-  },
-  {
-    id: 4,
-    type: "unusual_activity",
-    priority: "info",
-    title: "Unusual Activity Detected",
-    message: "COW-002 (Daisy) showing irregular movement patterns",
-    timestamp: "2024-01-15 12:20:45",
-    animalId: "COW-002",
-    read: true,
-    acknowledged: true,
-  },
-  {
-    id: 5,
-    type: "geofence_breach",
-    priority: "warning",
-    title: "Geofence Breach Alert",
-    message: "COW-001 (Bessie) approached restricted area boundary",
-    timestamp: "2024-01-15 11:55:33",
-    animalId: "COW-001",
-    read: true,
-    acknowledged: true,
-  },
-]
+import { useNotifications } from "@/hooks/use-notifications"
 
 const getNotificationIcon = (type: string) => {
   switch (type) {
@@ -119,20 +61,27 @@ const getPriorityColor = (priority: string) => {
 }
 
 export function NotificationsPanel() {
-  const [selectedNotifications, setSelectedNotifications] = React.useState<number[]>([])
+  const { notifications, loading, fetchNotifications } = useNotifications()
+  const [selectedNotifications, setSelectedNotifications] = React.useState<string[]>([])
   const [filterPriority, setFilterPriority] = React.useState("all")
   const [filterType, setFilterType] = React.useState("all")
   const [showUnreadOnly, setShowUnreadOnly] = React.useState(false)
+  const [search, setSearch] = React.useState("")
 
   const filteredNotifications = notifications.filter((notification) => {
     if (filterPriority !== "all" && notification.priority !== filterPriority) return false
     if (filterType !== "all" && notification.type !== filterType) return false
     if (showUnreadOnly && notification.read) return false
+    if (search && !(
+      notification.title?.toLowerCase().includes(search.toLowerCase()) ||
+      notification.message?.toLowerCase().includes(search.toLowerCase()) ||
+      notification.animalId?.toLowerCase().includes(search.toLowerCase())
+    )) return false
     return true
   })
 
   const unreadCount = notifications.filter((n) => !n.read).length
-  const criticalCount = notifications.filter((n) => n.priority === "critical" && !n.acknowledged).length
+  const criticalCount = notifications.filter((n) => n.priority === "critical").length
 
   return (
     <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
@@ -146,8 +95,8 @@ export function NotificationsPanel() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm">
-              <RefreshCwIcon className="h-4 w-4 mr-2" />
+            <Button variant="outline" size="sm" onClick={fetchNotifications} disabled={loading}>
+              <RefreshCwIcon className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
               Refresh
             </Button>
             <Button variant="outline" size="sm">
@@ -192,7 +141,12 @@ export function NotificationsPanel() {
           <div className="flex items-center gap-4 p-4 bg-muted/30 rounded-lg">
             <div className="relative flex-1">
               <SearchIcon className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input placeholder="Search notifications..." className="pl-8" />
+              <Input
+                placeholder="Search notifications..."
+                className="pl-8"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
             </div>
             <Select value={filterPriority} onValueChange={setFilterPriority}>
               <SelectTrigger className="w-32">
@@ -242,75 +196,79 @@ export function NotificationsPanel() {
           )}
 
           {/* Notifications List */}
-          <div className="space-y-2">
-            {filteredNotifications.map((notification) => (
-              <Card
-                key={notification.id}
-                className={`transition-colors ${
-                  !notification.read ? "bg-blue-50/50 border-blue-200" : ""
-                } ${selectedNotifications.includes(notification.id) ? "bg-primary/5 border-primary" : ""}`}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    <Checkbox
-                      checked={selectedNotifications.includes(notification.id)}
-                      onCheckedChange={(checked) => {
-                        if (checked) {
-                          setSelectedNotifications([...selectedNotifications, notification.id])
-                        } else {
-                          setSelectedNotifications(selectedNotifications.filter((id) => id !== notification.id))
-                        }
-                      }}
-                    />
-                    <div className={`p-2 rounded-full ${getPriorityColor(notification.priority)}`}>
-                      {getNotificationIcon(notification.type)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h4 className="font-medium">{notification.title}</h4>
-                        <Badge variant="outline" className="text-xs">
-                          {notification.animalId}
-                        </Badge>
-                        {!notification.read && <Badge className="text-xs bg-blue-500">New</Badge>}
-                        {notification.acknowledged && (
-                          <Badge variant="outline" className="text-xs text-green-600">
-                            Ack
+          {loading ? (
+            <div className="text-center py-8 text-muted-foreground">Loading notifications...</div>
+          ) : (
+            <div className="space-y-2">
+              {filteredNotifications.map((notification) => (
+                <Card
+                  key={notification.id}
+                  className={`transition-colors ${
+                    !notification.read ? "bg-blue-50/50 border-blue-200" : ""
+                  } ${selectedNotifications.includes(notification.id) ? "bg-primary/5 border-primary" : ""}`}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-start gap-3">
+                      <Checkbox
+                        checked={selectedNotifications.includes(notification.id)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedNotifications([...selectedNotifications, notification.id])
+                          } else {
+                            setSelectedNotifications(selectedNotifications.filter((id) => id !== notification.id))
+                          }
+                        }}
+                      />
+                      <div className={`p-2 rounded-full ${getPriorityColor(notification.priority)}`}>
+                        {getNotificationIcon(notification.type)}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h4 className="font-medium">{notification.title}</h4>
+                          <Badge variant="outline" className="text-xs">
+                            {notification.animalId}
                           </Badge>
-                        )}
+                          {!notification.read && <Badge className="text-xs bg-blue-500">New</Badge>}
+                          {notification.acknowledged && (
+                            <Badge variant="outline" className="text-xs text-green-600">
+                              Ack
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-2">{notification.message}</p>
+                        <div className="text-xs text-muted-foreground">
+                          {new Date(notification.timestamp).toLocaleString()}
+                        </div>
                       </div>
-                      <p className="text-sm text-muted-foreground mb-2">{notification.message}</p>
-                      <div className="text-xs text-muted-foreground">
-                        {new Date(notification.timestamp).toLocaleString()}
-                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVerticalIcon className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem>
+                            <CheckIcon className="mr-2 h-4 w-4" />
+                            Mark as Read
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <BellIcon className="mr-2 h-4 w-4" />
+                            Acknowledge
+                          </DropdownMenuItem>
+                          <DropdownMenuItem>
+                            <MapPinIcon className="mr-2 h-4 w-4" />
+                            View on Map
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-red-600">Delete</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8">
-                          <MoreVerticalIcon className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
-                          <CheckIcon className="mr-2 h-4 w-4" />
-                          Mark as Read
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <BellIcon className="mr-2 h-4 w-4" />
-                          Acknowledge
-                        </DropdownMenuItem>
-                        <DropdownMenuItem>
-                          <MapPinIcon className="mr-2 h-4 w-4" />
-                          View on Map
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="text-red-600">Delete</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="history" className="space-y-4">

@@ -12,7 +12,6 @@ import { useRouter } from "expo-router";
 import { auth, db } from "./config";
 import { doc, setDoc, getDoc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { STORAGE_KEY } from './tracking-context';
 import { useTracking } from './tracking-context';
 
 export type UserType = {
@@ -120,6 +119,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     email,
                     fullName: fullName || "",
                     phoneNumber: phoneNumber || "",
+                    role: "farmer",
                     createdAt: new Date().toISOString(),
                 };
                 await setDoc(doc(db, "users", uid), userData);
@@ -197,7 +197,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setLoading(true);
         try {
             await signOut(auth);
-            await AsyncStorage.removeItem(STORAGE_KEY); // Clear farm data
+            await AsyncStorage.clear(); // Clear all data
             setUser(null);
             router.push("/login");
         } catch (err: any) {
@@ -235,5 +235,6 @@ export const fetchUsersByFarmId = async (farmId: string): Promise<UserType[]> =>
     querySnapshot.forEach((docSnap) => {
         users.push(docSnap.data() as UserType);
     });
+    
     return users;
 };

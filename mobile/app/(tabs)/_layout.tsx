@@ -1,7 +1,6 @@
-import { Tabs } from 'expo-router';
+import { Redirect, Tabs } from 'expo-router';
 import React from 'react';
-import { Platform } from 'react-native';
-
+import { ActivityIndicator, Platform, View } from 'react-native';
 import { HapticTab } from '@/components/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import TabBarBackground from '@/components/ui/TabBarBackground';
@@ -9,11 +8,22 @@ import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { FontAwesome } from '@expo/vector-icons';
-
-
+import { useAuth } from '@/firebase/auth-context';
 
 export default function TabLayout() {
     const colorScheme = useColorScheme();
+    const { user, initialLoading, loading } = useAuth();
+
+    if (initialLoading) {
+        return (
+            <View className="flex-1 justify-center items-center bg-primary">
+              <ActivityIndicator size="large" color="#fff" />
+            </View>
+        );
+    }
+
+    if (!loading && !user) return <Redirect href="/login" />;
+
     return (
         <Tabs
             screenOptions={{

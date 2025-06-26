@@ -5,13 +5,19 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserType } from "./auth-context";
 import * as Notifications from 'expo-notifications';
 import { Alert } from 'react-native';
+import {
+  parseLatestFeeds,
+  feedsToSensorFeeds,
+  checkLostConnections,
+  checkGeofenceViolations,
+} from "../hooks/functions";
 
 export type FarmCenterCoordinates = {
     latitude: number;
     longitude: number;
 };
 
-type SensorFeed = {
+export type SensorFeed = {
     longitude: number;
     latitude: number;
     collarId: string;
@@ -144,98 +150,23 @@ export const TrackingProvider = ({ children }: { children: ReactNode }) => {
         }
     }, []);
 
-    const isOutsideGeofence = (sensor: SensorFeed, center: FarmCenterCoordinates, radius: number) => {
-        const toRad = (deg: number) => deg * (Math.PI / 180);
-        const R = 6371e3;
-        const φ1 = toRad(center.latitude);
-        const φ2 = toRad(sensor.latitude);
-        const Δφ = toRad(sensor.latitude - center.latitude);
-        const Δλ = toRad(sensor.longitude - center.longitude);
-
-        const a = Math.sin(Δφ / 2) ** 2 +
-                  Math.cos(φ1) * Math.cos(φ2) *
-                  Math.sin(Δλ / 2) ** 2;
-
-        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        const distance = R * c;
-
-        return distance > radius;
-    };
-
-    const sendNotification = async (title: string, body: string) => {
-        await Notifications.scheduleNotificationAsync({
-            content: {
-                title,
-                body,
-            },
-            trigger: null,
-        });
-    };
-
     const fetchSensorsFeeds = useCallback(async () => {
         try {
             const res = await fetch(
                 "https://api.thingspeak.com/channels/2989762/feeds.json?api_key=B0CPJXS5KOZBZOB2&results=20"
             );
             const data = await res.json();
+
             if (data.feeds && Array.isArray(data.feeds)) {
-                const latestFeeds: Record<string, { feed: any; created_at: string }> = {};
-                data.feeds.forEach((feed: any) => {
-                    const collarId = feed.field2;
-                    const createdAt = feed.created_at;
-                    if (!collarId || !feed.field1) return;
-                    if (!latestFeeds[collarId] || new Date(createdAt) > new Date(latestFeeds[collarId].created_at)) {
-                        latestFeeds[collarId] = { feed, created_at: createdAt };
-                    }
-                });
-
-                const feedsArr: SensorFeed[] = Object.values(latestFeeds)
-                    .map(({ feed }) => {
-                        const [longitude, latitude] = feed.field1.split(",").map(Number);
-                        return {
-                            longitude,
-                            latitude,
-                            collarId: feed.field2,
-                        };
-                    })
-                    .filter(feed => collarIds.includes(feed.collarId));
-
+                const latestFeeds = parseLatestFeeds(data.feeds);              // get all latest feeds
+                const feedsArr = feedsToSensorFeeds(latestFeeds, collarIds);   // get feeds for loggeg in collars 
                 setSensorsFeeds(feedsArr);
 
-                // --- NEW: Check for lost connection ---
-                const now = new Date();
-                collarIds.forEach(collarId => {
-                    const latest = latestFeeds[collarId];
-                    if (!latest) {
-                        // No data at all for this collar
-                        sendNotification(
-                            'Connection with the animal is lost',
-                            `No data received from collar ${collarId}.`
-                        );
-                        return;
-                    }
-                    const lastTime = new Date(latest.created_at);
-                    if ((now.getTime() - lastTime.getTime()) > 60 * 1000) {
-                        sendNotification(
-                            'Connection with the animal is lost',
-                            `No data received from collar ${collarId} for over 1 minute.`
-                        );
-                    }
-                });
-                // --- END NEW ---
+                // Check for lost connections and geofence violations
+                await checkLostConnections(collarIds, latestFeeds, setSensorsFeeds);
 
-                if (farmCenterCoordinates && farmRadius) {
-                    feedsArr.forEach(async (sensor) => {
-                        const outside = isOutsideGeofence(sensor, farmCenterCoordinates, farmRadius);
-                        if (outside) {
-                            await sendNotification(
-                                'Animal Out of Bounds',
-                                `Collar ${sensor.collarId} is outside the farm geofence.`
-                            );
-                        }
-                    });
-                }
-            }
+                await checkGeofenceViolations(farmCenterCoordinates,farmRadius, feedsArr);
+              }
         } catch (e) {
             console.error("Error fetching sensors feeds:", e);
             setSensorsFeeds([]);
@@ -263,7 +194,7 @@ export const TrackingProvider = ({ children }: { children: ReactNode }) => {
 
     useEffect(() => {
         fetchSensorsFeeds();
-        const interval = setInterval(fetchSensorsFeeds, 30000);
+        const interval = setInterval(fetchSensorsFeeds, 16000);
         return () => clearInterval(interval);
     }, [fetchSensorsFeeds]);
 

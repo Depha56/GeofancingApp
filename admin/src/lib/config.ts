@@ -4,6 +4,8 @@ import { initializeApp } from "firebase/app";
 // This is a workaround for the issue with Firebase and React Native Async Storage
 import { getAuth } from "firebase/auth";
 import { getFirestore } from 'firebase/firestore';
+import { getMessaging, getToken, onMessage } from "firebase/messaging";
+
 const env = import.meta.env;
 
 const firebaseConfig = {
@@ -16,6 +18,8 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+const messaging = getMessaging(app);
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
+export { messaging, getToken, onMessage };
