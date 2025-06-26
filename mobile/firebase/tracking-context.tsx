@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
-import { doc, setDoc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, updateDoc, arrayRemove } from "firebase/firestore";
 import { db } from "./config";
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { UserType } from "./auth-context";
@@ -76,33 +76,47 @@ export const TrackingProvider = ({ children }: { children: ReactNode }) => {
         requestNotificationPermissions();
     }, []);
 
-    const addUniqueCollarId = async (collarId: string) => {
+    const addUniqueCollarId = async (collarId: string, farmId: string) => {
         const collarRef = doc(db, "collars", collarId);
         const collarSnap = await getDoc(collarRef);
         if (collarSnap.exists()) {
-            throw new Error("Collar ID Was Taken!");
+            const prevFarmId = collarSnap.data().assignedFarmId;
+            if (prevFarmId && prevFarmId !== farmId) {
+                // Remove collar from previous farm's collarIds array
+                const prevFarmRef = doc(db, "farms", prevFarmId);
+                await updateDoc(prevFarmRef, {
+                    collarIds: arrayRemove(collarId),
+                });
+            }
+            // Update assignedFarmId to new farm
+            await setDoc(collarRef, { collarId, assignedFarmId: farmId }, { merge: true });
+        } else {
+            throw new Error("Communicate the Admin to get Valid Collar ID");
         }
-        await setDoc(collarRef, { collarId });
     };
 
     const setFarmData = async (
         farmRadius: number,
         farmCenterCoordinates: FarmCenterCoordinates,
-        collarIds: string[], 
+        collarIds: string[],
         user: UserType,
         isUpdate: boolean = false,
-        updateCollarId?:string,
+        updateCollarId?: string,
     ) => {
-        if(!isUpdate){
-            await addUniqueCollarId(collarIds[0] || "");
+        const newFarmId = farmId || generateFarmId();
+
+        // Assign each collar to this farm and update Firestore accordingly
+        for (const collarId of collarIds) {
+            await addUniqueCollarId(collarId, newFarmId);
         }
 
-        if(updateCollarId && !collarIds.includes(updateCollarId)) {
-            await addUniqueCollarId(updateCollarId);
+        // If updating and a new collar is added
+        if (isUpdate && updateCollarId && !collarIds.includes(updateCollarId)) {
+            await addUniqueCollarId(updateCollarId, newFarmId);
             collarIds.push(updateCollarId);
         }
 
-        const newFarmId = farmId || generateFarmId();
+        // Update farm document with new collarIds
         await setDoc(doc(db, "farms", newFarmId), {
             farmId: newFarmId,
             farmRadius,
